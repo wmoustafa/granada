@@ -1,0 +1,2 @@
+path(#X,0):-vertices(X,_,_), X==1;
+path(#Z,MIN(D+1)):-edges(Y,Z,E), path(Y,D);

@@ -1,0 +1,2 @@
+l(#X,X):-vertices(X,N,G);
+l(#X,MIN(L)):-edges(X,Y),l(Y,L);

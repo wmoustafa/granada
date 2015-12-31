@@ -1,0 +1,2 @@
+pathcount(#X,1):-vertices(X,_,_), X==30;
+pathcount(#X,SUM(C)):->edges(X,Y),pathcount(Y,C);
