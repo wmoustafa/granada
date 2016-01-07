@@ -1,0 +1,3 @@
+n2(#GX,#GY,IDX,IDY):-nodes(IDX,NX,GX),edges(IDX,IDY),nodes(IDY,NY,GY), IDX<IDY;
+n2(#GX,#GZ,IDX,IDZ):-nodes(IDX,NX,GX),edges(IDX,IDY), edges(IDY,IDZ),nodes(IDZ,NZ,GZ),IDX<IDZ;
+n2c(#GX,#GY,Count(IDY)):-n2(GX,GY,IDX,IDY);

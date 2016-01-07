@@ -1,0 +1,4 @@
+outdegree(#X,COUNT(Y)):-edges(X,Y),vertices(Y,_,_);
+pagerank(#X,0,X):-vertices(X,_,_);
+pagerank(#X,I+1,SUM(P)):-edges(Y,X),pagerank(Y,I,P),outdegree(Y,D),I<10;
+

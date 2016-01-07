@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Put site-specific property overrides in this file. -->
+
+<configuration>
+<property>
+<name>mapred.job.tracker</name> 
+<value>yoda40:54311</value>
+</property>
+
+<property>
+<name>mapred.tasktracker.map.tasks.maximum</name>
+<value>4</value>
+</property>
+
+<property>
+<name>mapred.map.tasks</name>
+<value>4</value>
+</property>
+</configuration>

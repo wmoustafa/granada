@@ -1,0 +1,376 @@
+/**
+ * JavaCC file
+ */
+ 
+options {
+  JDK_VERSION = "1.5";
+  STATIC = false;
+}
+PARSER_BEGIN(Parser)
+package parser;
+
+import java.io.ByteArrayInputStream;
+import algebra.Rule;
+import algebra.Program;
+import algebra.Predicate;
+import java.util.List;
+import java.util.UUID;
+import java.util.Map;
+import java.util.Hashtable;
+import java.util.ArrayList;
+
+public class Parser {
+	
+  public static void main(String args[]) throws ParseException {
+  	String input = "(4+5)*9==49";
+    Parser parser = new Parser(new ByteArrayInputStream(input.getBytes()));
+	try 
+	{
+		Expression n = parser.expression();
+		System.out.println(n);
+		System.out.println(n.evaluate(null));
+	}
+	catch (Exception e) 
+	{
+		e.printStackTrace();
+	}
+  }
+}
+PARSER_END(Parser)
+
+SKIP :
+{
+ 	" "
+|	"\r"
+|	"\t"
+|	"\n"
+| <"%" (~["\n","\r"])* ("\n"|"\r")>
+}
+TOKEN : /* OPERATORS */
+{
+	< PLUS: "+" >
+|	< MINUS: "-" >
+|	< MULTIPLY: "*" >
+|	< DIVIDE: "/" >
+|	< EQ: "==" >
+|	< NEQ: "!=" >
+|	< OUTERJOIN: ">>" >
+|	< GTEQ: ">=" >
+|	< GT: ">" >
+|	< LTEQ: "<=" >
+|	< LT: "<" >
+|	< DERIVED_FROM: ":-" >
+|	< DERIVED_FROM_MODULARLY_STRATIFIED: ":->" >
+}
+TOKEN :
+{
+    < NUMBER: ( <DIGIT> )+ >
+|   < DIGIT: ["0" - "9"] >
+|   < DOMAIN: "DOMAIN" >
+|   < DELETE: "DELETE" >
+|   < INSERT: "INSERT" >
+|   < UPDATE: "UPDATE" >
+|   < ITERATE: "ITERATE" >
+|   < COMPOSITE: "COMPOSITE" >
+|   < TOP: "TOP" >
+|   < DONTCARE: "_" >
+|   < IDENTIFIER: (["A" - "Z"])(["0" - "9"]|["A" - "Z"]|["a" - "z"]|"_")* >
+|   < PREDICATE: (["a" - "z"])(["0" - "9"]|["A" - "Z"]|["a" - "z"]|"_")* >
+|   < STRING: "\""(~["\""])*"\"" >
+
+}
+
+Predicate<Expression> rule_head() :
+{
+	Predicate<Expression> head;
+	Token t;
+	Expression arg;
+	int argPosition = 0;
+	List<Integer> keyFields = new ArrayList<Integer>();
+}
+{
+	t=<PREDICATE> 
+	{
+		head = new Predicate<Expression>(t.image);
+	}
+	"("
+	("#" {keyFields.add(argPosition);})?
+	arg=expression()
+	{
+		argPosition++;
+		head.addArg(arg);
+	}
+	(
+		"," 
+		("#" {keyFields.add(argPosition);})?
+		arg=expression()
+		{
+			argPosition++;
+			head.addArg(arg);
+		}
+	)*
+	")"
+	{
+		head.setKeyFields(keyFields);
+		return head;
+	}
+}
+
+Predicate<Expression> literal_subgoal() :
+{
+	Predicate<Expression> subgoal;
+	Token t;
+	Term arg;
+}
+{
+	t=<PREDICATE> "("
+	{
+		subgoal = new Predicate<Expression>(t.image);
+	}
+	arg = term_arg()
+	{
+		subgoal.addArg(arg);
+	}
+	(
+		"," arg = term_arg()
+		{
+			subgoal.addArg(arg);
+		}
+	)*
+	")"
+	{
+		return subgoal;
+	}
+}
+
+Term term_arg() :
+{
+	Token t;
+	Term arg;
+}
+{
+	(t=<IDENTIFIER>
+	{
+		arg = new DatalogVariable(t.image);
+	} 
+	
+	| t=<STRING>
+	{
+		return new StringConst(t.image.substring(1,t.image.length()-1));
+	} 
+	
+	| t=<NUMBER>
+	{
+		arg = new IntegerConst(Integer.parseInt(t.image));
+	}
+	|
+	<DONTCARE>
+	{
+		return new DatalogVariable("DontCare"+UUID.randomUUID().toString());
+	}
+	)
+	{
+		return arg;
+	}
+}
+	
+
+Rule rule() :
+{
+	Predicate<Expression> head;
+	Predicate<Expression> subgoal;
+	Expression condition;
+	Token topKField;
+	Token topK;
+	Rule rule;
+	Token t;
+}
+{
+	{rule = new Rule();}
+	head = rule_head()
+	{
+		rule.setHead(head);
+	}
+
+	(
+	  <DERIVED_FROM> |
+	  	( <DERIVED_FROM_MODULARLY_STRATIFIED>
+	  		  	{
+	  	  rule.setModularlyStratified(true);	  	}
+		)	)
+	
+	(subgoal = literal_subgoal()
+	{
+		rule.addLiteralSubgoal(subgoal);
+	}
+	|
+	condition = expression()
+	{
+		rule.addConditionSubgoal(condition);
+	}
+	) 
+	
+	( (",") 
+		(
+			subgoal = literal_subgoal()
+			{
+				rule.addLiteralSubgoal(subgoal);
+			}
+			|
+		 	condition = expression()
+			{
+				rule.addConditionSubgoal(condition);
+			}
+		)
+		 
+	)*
+	 ";"
+	{
+		return rule;
+	}
+		
+}
+
+
+Program program() :
+{
+  	Program p;
+	Rule r;
+}
+{
+	{
+		p=new Program();
+	}
+	(
+		   r = rule() {p.addRule(r);}
+	)+
+	<EOF>
+	{
+		return p;
+	}
+}
+
+
+Expression expression() : 
+{
+	Expression operand1;
+	Expression operand2;
+	Expression operation;
+	Token t;
+}
+{
+	(
+		operand1=sum() 
+		(
+			( t=<EQ>
+			| t=<NEQ> 
+			| t=<GT> 
+			| t=<GTEQ> 
+			| t=<LT> 
+			| t=<LTEQ> 
+			) 
+			operand2=sum()
+			{
+			  	operation = new Operation(t.image, operand1, operand2);
+			  	operand1 = operation;
+			}
+  		)*
+  		{
+  			return operand1;
+  		}
+  	)
+}
+
+Expression sum() : 
+{
+	Expression operand1;
+	Expression operand2;
+	Expression operation;
+	Token t;
+}
+{
+	(
+		operand1=term() 
+		(
+			( t=<PLUS>
+			| 
+			t=<MINUS> ) 
+			operand2=term()
+			{
+			  	operation = new Operation(t.image, operand1, operand2);
+			  	operand1 = operation;
+			}
+  		)*
+  		{
+  			return operand1;
+  		}
+  	)
+}
+
+Expression term() : 
+{
+	Expression operand1;
+	Expression operand2;
+	Expression operation=null;
+	Token t;
+}
+{
+		operand1=primary() 
+		(
+			( t=<DIVIDE>
+			 | 
+			 t=<MULTIPLY>  
+			) 
+			operand2=primary()
+			{
+			  	operation = new Operation(t.image, operand1, operand2);
+			  	operand1 = operation;
+			}
+  		)*
+  		{
+  			return operand1;
+  		}
+}
+
+
+Expression primary() : 
+{
+	Token t1,t2,t3,t4,t5;
+	Expression n,n1,n2;
+	List<Expression> args;
+}
+{
+	LOOKAHEAD(2)
+	t4=<IDENTIFIER>"("
+			{args = new ArrayList<Expression>();} 
+			n1=expression() {args.add(n1);} 
+			("," n2=expression() {args.add(n2);})* 
+		")"
+	{
+		return new UserDefinedFunction(t4.image, args);
+	}
+	|
+	<DONTCARE>
+	{
+		return new DatalogVariable("DontCare"+UUID.randomUUID().toString());
+	}
+	|
+	t1=<NUMBER>
+	{
+		return new IntegerConst(Integer.parseInt(t1.image));
+	}
+	|
+	t2=<IDENTIFIER>
+	{
+		return new DatalogVariable(t2.image);
+	}
+	| 
+		"(" n=expression() ")"
+		{return n;}
+	|
+	t3=<STRING>
+	{
+		return new StringConst(t3.image.substring(1,t3.image.length()-1));
+	}
+		
+}

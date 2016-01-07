@@ -1,0 +1,2 @@
+n(#X,Z):-edges(X,Y), edges(Y,Z), vertices(X,_,"M"), vertices(Y,_,"M"), vertices(Z,_,"F");
+c(#X,Count(Y)):-n(X,Y);
