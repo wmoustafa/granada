@@ -15,19 +15,18 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.log4j.Logger;
 
-import schema.Database;
-import schema.Metadata;
-import algebra.RelationalType;
-import algebra.Rule;
-
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+
+import algebra.RelationalType;
+import algebra.Rule;
+import schema.Database;
+import schema.Metadata;
 
 public class DatalogComputation extends BasicComputation<SuperVertexId, Database, NullWritable, Database> {
 	private static final Logger LOG =
 			Logger.getLogger(DatalogComputation.class);
 	
-	long compute_start, compute_end;
 
 	public void preSuperstep()
 	{
@@ -37,21 +36,18 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 	public void compute(
 			Vertex<SuperVertexId, Database, NullWritable> vertex,
 			Iterable<Database> messages) throws IOException {
-		try
-		{
+//		try
+//		{
 //			System.out.println("*****************************************");
 //			System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
 
-			compute_start = System.nanoTime();
 			DatalogWorkerContext wc = getWorkerContext();
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
 			boolean isPagerank = wc.getProgramName().equals("pagerank");
 			Metadata metadata = wc.metadata;
 			HashMap<Integer, SuperVertexId> neighbors = new HashMap<>();
-			
-			long start, end;
-			
+			aggregate("COMPUTE_INVOCATIONS", new LongWritable(1));			
 			
 			Database inputDatabase = vertex.getValue();
 //			System.out.println("Vertex value = " + vertex.getValue());
@@ -59,99 +55,112 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 
 			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
 			Database messagesDb = new Database();
-//			start = System.nanoTime();
-			for (Database message : messages)
+			
+			//TODO testing out an idea to sent smaller messages
+			// 1. Retrieve key of tuple
+			// 2. Create tuple, only last column changes based on received msg
+//			int vertex_id = vertex.getId().vertexId;			
+//			int[] array = new int[3];	
+//			array[0] = 0;
+//			for(Database message: messages) {
+////				System.out.println("Message database received=" + message);
+//				assert(message.exists("path_Y1727886952_OUTGOING"));
+//				Table msg = message.getDataTableByName("path_Y1727886952_OUTGOING");
+////				System.out.println("Messages table= " + msg);
+//				assert(msg.size() == 1);
+//				int key = msg.getData().values().iterator().next().toArray()[1];
+//				int value = msg.getData().values().iterator().next().toArray()[2];
+////				System.out.println("Vertex id = " + vertex_id + ", key = " + key);
+////				System.out.println("Received value = " + value);
+//				array[1] = key;
+//				array[2] = value;
+//				Class[] fieldTypes = new Class[3];
+//				int[] keyFields = new int[1];
+//				keyFields[0] = 1;
+//				Table new_table = new Table(fieldTypes,keyFields);
+//				new_table.addTuple(vertex_id, new Tuple(array));
+////				System.out.println("New msg table = " + Arrays.toString(new_table.getData().values().iterator().next().toArray()));
+//				message.removeDataTable("path_Y1727886952_OUTGOING");
+////				System.out.println("Messages database after removing = " + message);
+//				message.addDataTable("path_Y1727886952_OUTGOING", new_table);
+////				System.out.println("Message database created = " + message);
+//				messagesDb.combine2(message);
+//				System.out.println("Message DB after combining=" + messagesDb);
+//			}
+
+			for (Database message : messages){
 				messagesDb.combine2(message);
-//			end = System.nanoTime();
-//			aggregate("COMBINE_MSG", new LongWritable(end-start));		
+//				System.out.println("Message database after combining=" + message);
+			}
 					
 			//the following line is important. in case there were no messages, this has to be cleaned manually
 			//, or other wise it will end up with messages from the past.
 			//in case of sum aggregate, those messages will keep increasing the value of the things they join with
-//			start = System.nanoTime();
 			inputDatabase.removeRelationalDeltaTables(); 
-//			end = System.nanoTime();
-//			aggregate("REMOVE_TABLES", new LongWritable(end-start));
 			
 			Set<String> changedTables = new HashSet<>();
 
-//			System.out.println("Got messages: " + messagesDb);
-//			start = System.nanoTime();
 			Set<String> changed = inputDatabase.refresh(messagesDb);
-//			end = System.nanoTime();
-//			aggregate("REFRESH_DB", new LongWritable(end-start));			
 			
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			for (Rule rule : rulesToProcess)
 			{
 //				System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
-//				start = System.nanoTime();
-				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
-//				end = System.nanoTime();
-//				aggregate("EVALUATE_RULE", new LongWritable(end-start));		
-				
+				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase);
 //				System.out.println("Output:" + outputDatabase);
+				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
-//					start = System.nanoTime();
-//					System.out.println("Refresh input database with outpout" );
 					changed = inputDatabase.refresh(outputDatabase);
-//					end = System.nanoTime();
-//					aggregate("REFRESH_OUTPUT", new LongWritable(end-start));
-					////System.out.println("Subtracted input from output: " + outputDatabase);
-					////System.out.println("After combining: " + inputDatabase);
-					////System.out.println("CHANGED:" + changed);
+//					System.out.println("Refresh input with output: " + inputDatabase);
 				}
 				else
 				{
 //					System.out.println("Combine relationalDatase with output " );
 //					System.out.println("Before combine: relational database: " + relationalDatabase);
-//					start = System.nanoTime();
 					changed = relationalDatabase.combine2(outputDatabase);
 					changedTables.addAll(changed);
-//					end = System.nanoTime();
-//					aggregate("COMBINE_OUTPUT", new LongWritable(end-start));
 //					System.out.println("After combine: relational database: " + relationalDatabase);
 				}
 			}
 			
-			////System.out.println("ALLCHANGED:" + changedTables);
 			for (String table : changedTables)
 				aggregate(table, new BooleanWritable(true));
 
-//			start = System.nanoTime();
 			if (!relationalDatabase.isEmpty())
 			{
 				Map<SuperVertexId, Database> superVertexIdToDatabase = null;
-				if (!useSemiAsync && !useSemiJoin) superVertexIdToDatabase = relationalDatabase.getDatabasesForEverySuperVertex(inputDatabase);
-				else if (!useSemiAsync && useSemiJoin) superVertexIdToDatabase = relationalDatabase.getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors, metadata);
-				else if (useSemiAsync && !useSemiJoin) superVertexIdToDatabase = relationalDatabase.getDatabasesForEverySuperVertexWithMessages(inputDatabase, isPagerank);
-				else if (useSemiAsync && useSemiJoin) superVertexIdToDatabase = relationalDatabase.getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
-//				end = System.nanoTime();
-//				aggregate("PARTITION_MSG", new LongWritable(end-start));
-				start = System.nanoTime();
+				if (!useSemiAsync && !useSemiJoin) 
+					superVertexIdToDatabase = relationalDatabase.
+					getDatabasesForEverySuperVertex(inputDatabase);
+				else if (!useSemiAsync && useSemiJoin) 
+					superVertexIdToDatabase = relationalDatabase.
+					getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors, metadata);
+				else if (useSemiAsync && !useSemiJoin) 
+					superVertexIdToDatabase = relationalDatabase.
+					getDatabasesForEverySuperVertexWithMessages(inputDatabase, isPagerank);
+				else if (useSemiAsync && useSemiJoin) 
+					superVertexIdToDatabase = relationalDatabase.
+					getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
 				for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
 				{
 					SuperVertexId neighborId = entry.getKey();
 					Database neighborDb = entry.getValue();
 					sendMessage(neighborId, neighborDb);
-//					System.out.println(neighborDb.getTableSizes());
 //					System.out.println("SENT " + neighborDb + "TO NEIGHBOR: " + neighborId);
+					aggregate("SEND_RECORDS", new LongWritable(neighborDb.getDataTableByName("path_Y1727886952").size()));
+					aggregate("SEND_MSG", new LongWritable(1));
 				}
-//				end = System.nanoTime();
-//				aggregate("SEND_MSG", new LongWritable(end-start));
 			}
 			
 
 			vertex.setValue(inputDatabase);
-			//vertex.voteToHalt();
-//			compute_end = System.nanoTime();
-//			aggregate("COMPUTE_TIME", new LongWritable(compute_end-compute_start));
-		}
-		catch (Exception e) 
-		{			
-			e.printStackTrace();
-		}
+			vertex.voteToHalt();
+//		}
+//		catch (Exception e) 
+//		{			
+//			e.printStackTrace();
+//		}
 	}
 
 	Map<String,Boolean> stringToMap(String str)

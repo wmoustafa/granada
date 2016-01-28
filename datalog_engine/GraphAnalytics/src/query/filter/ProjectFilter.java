@@ -52,7 +52,7 @@ public class ProjectFilter extends Filter {
 	}
 	
 	@Override
-	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
+	public void open(Database inputDatabase, Database outputDatabase) {
 
 		if (!outputDatabase.exists(outputTableName))
 		{
@@ -64,7 +64,6 @@ public class ProjectFilter extends Filter {
 		outputTable.setAggregationFunctionType(aggregationFunctionType);
 		if (isRecursive) outputTable.setRecursive();
 		if (isSourceNodeVariableUnncessary) outputTable.setSourceNodeVariableUnncessary();
-		metadata.setMetadata(outputTableName, keyFields, types, relationalType, isRecursive, isSourceNodeVariableUnncessary, aggregationFunctionType);
 	}
 
 	@Override

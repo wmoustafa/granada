@@ -22,7 +22,7 @@ public abstract class Filter {
 	Filter nextFilter=null;
 	Cursor cursor=null;
 	
-	public abstract void open(Database inputDatabase, Database outputDatabase, Metadata metadata);
+	public abstract void open(Database inputDatabase, Database outputDatabase);
 	public abstract void next();
 	public abstract String toString();
 
@@ -59,13 +59,13 @@ public abstract class Filter {
 		if (nextFilter!=null) nextFilter.close();
 		
 	}
-	public Database evaluate(Database inputDatabase, Metadata metadata)
+	public Database evaluate(Database inputDatabase)
 	{
 		Database outputDatabase = new Database();
 		int cursorSize = 0;
 		for (Filter f = this; f != null; f = f.nextFilter) cursorSize++;
 		cursor = new Cursor(cursorSize - 1);
-		open(inputDatabase, outputDatabase, metadata);		
+		open(inputDatabase, outputDatabase);		
 		if (cursor!=null) next();
 		close();
 //		System.out.println("Evaluate plan:");

@@ -34,12 +34,12 @@ public class HashJoinFilter extends Filter {
 		return f;
 	}
 	
-	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata)
+	public void open(Database inputDatabase, Database outputDatabase)
 	{
 		if (nextFilter!=null) 
 		{
 			nextFilter.setInputCursor(cursor);
-			nextFilter.open(inputDatabase, outputDatabase, metadata);
+			nextFilter.open(inputDatabase, outputDatabase);
 		}
 		Table rhsDataTable = inputDatabase.getDataTableByName(rhsTableAlias.tableName);
 //		System.out.println("rhsTableAlias.tableName = " + rhsTableAlias.tableName);

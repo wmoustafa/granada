@@ -90,20 +90,43 @@ public class Database implements Writable {
 	}
 
 	public void readFields(DataInput in) throws IOException {
-		//byte[] uncompressedByteArray = WritableUtils.readCompressedByteArray(in);
-		//UnsafeByteArrayInputStream inStream = new UnsafeByteArrayInputStream(uncompressedByteArray);
-//		System.out.println("Metadata in read database = " + metadata);
+
 		size = in.readInt();
 		tables = new HashMap<String, Table>();
 		for (int i = 0; i < size; i++)
 		{
-			//TODO Vicky test for performance
+			//TODO Vicky test for performance send an integer id as table name instead of large string
 			String tableName = in.readUTF();
-//			String tableName = String.valueOf(in.readInt());
-//			System.out.println("Table name = " + tableName);
-			Table table = new Table(tableName,null, null, metadata);
-			table.readFields(in);
-			tables.put(tableName, table);
+			Table table = null;
+			if(tableName.equals("y"))
+			{
+				table = new Table(null, null, "path_Y1727886952_OUTGOING");
+				table.readFields(in);
+				tables.put("path_Y1727886952_OUTGOING", table);
+			}
+			else
+			{
+				table = new Table(null, null);
+				table.readFields(in);
+				tables.put(tableName, table);
+			}
+		}
+	}
+
+
+	public void write(DataOutput out) throws IOException {
+//		System.out.println("Metadata in write database = " + metadata);
+		out.writeInt(tables.entrySet().size());
+		for (Map.Entry<String, Table> entry : tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table table = entry.getValue();
+			//Vicky TODO: testing for performance optimization
+			if(tableName.equals("path_Y1727886952_OUTGOING"))
+				out.writeUTF("y");
+			else
+				out.writeUTF(tableName);
+			table.write(out);
 		}
 	}
 
@@ -127,21 +150,6 @@ public class Database implements Writable {
 			Table table = new Table(null, null);
 			table.readFields(inStream);
 			tables.put(tableName, table);
-		}
-	}
-
-	public void write(DataOutput out) throws IOException {
-//		System.out.println("Metadata in write database = " + metadata);
-		out.writeInt(tables.entrySet().size());
-		for (Map.Entry<String, Table> entry : tables.entrySet())
-		{
-			String tableName = entry.getKey();
-//			System.out.println("Write table: " + tableName);
-			Table table = entry.getValue();
-			//Vicky TODO: testing for performance optimization
-			out.writeUTF(tableName);
-//			out.writeInt(metadata.name_to_id.get(tableName));
-			table.write(out);
 		}
 	}
 	
@@ -348,6 +356,9 @@ public class Database implements Writable {
 					existingDatabase = new Database();
 					partitionedDatabase.put(superVertexId, existingDatabase);
 				}
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: tableName = " + tableName);
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: table = " + tablePartition);
+				tablePartition.setName(tableName);
 				existingDatabase.addDataTable(tableName, tablePartition);
 			}
 		}

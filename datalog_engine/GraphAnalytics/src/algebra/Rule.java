@@ -515,8 +515,8 @@ public class Rule {
 		for (Rule predecessorRule : rewriteRuleDependency.get(v))
 		{
 			Predicate predecessorRuleHead = predecessorRule.getHead();
-			System.out.println("PredecessorRuleHead:" + predecessorRuleHead);
-			System.out.println("v:" + v);
+//			System.out.println("PredecessorRuleHead:" + predecessorRuleHead);
+//			System.out.println("v:" + v);
 			Predicate newPredicate = new Predicate(predecessorRuleHead);
 			newPredicate.removeLastArg();
 			newPredicate.addArg(v);
@@ -535,10 +535,10 @@ public class Rule {
 			
 		}
 		for (Expression e : projectionFields) rewriteHead.addArg(e);
-		System.out.println(rewriteHead);
+//		System.out.println(rewriteHead);
 		rewriteHead = rewriteHead.substitute(substitutionMap);
-		System.out.println(rewriteHead);
-		System.out.println("SUBStiutionmap: " + substitutionMap);
+//		System.out.println(rewriteHead);
+//		System.out.println("SUBStiutionmap: " + substitutionMap);
 		rewrite.setHead(rewriteHead);
 		for (Predicate p : rewriteLiteralSubgoals) rewrite.addLiteralSubgoal(p);
 		for (Expression e : rewriteConditionSubgoals) rewrite.addConditionSubgoal(e);
@@ -688,11 +688,11 @@ public class Rule {
 			finalRule.setHead(new Predicate(getHead()));		
 			rewrites.add(finalRule);*/
 			Rule sinkRule = rewrites.get(rewrites.size() - 1);
-			System.out.println("^^^" + getHead());
-			System.out.println("^^^" + getHead().substitute(substitutionMap));
+//			System.out.println("^^^" + getHead());
+//			System.out.println("^^^" + getHead().substitute(substitutionMap));
 			sinkRule.setHead(getHead().substitute(substitutionMap));
 			//sinkRule.setHead(new Predicate(getHead()));
-			System.out.println(sinkRule.getHead());
+//			System.out.println(sinkRule.getHead());
 			sinkRule.relationalType = RelationalType.NOT_RELATIONAL;
 			if (useEagerAggregation) applyEagerAggregationEdgeBased(rewrites, rewriteRuleDependency);
 			removeUnncessaryVariables(rewrites, rewriteRuleDependency, true);
@@ -826,9 +826,9 @@ public class Rule {
 			if (edgeBased) predecessorRule = rewriteRuleDependency.get(primaryKeyVariable).iterator().next();
 			else predecessorRule = rewriteRuleDependency.get(predecessor).iterator().next();
 
-			System.out.println("******************");
-			System.out.println(rule);
-			System.out.println(predecessorRule);
+//			System.out.println("******************");
+//			System.out.println(rule);
+//			System.out.println(predecessorRule);
 			Predicate predecessorRuleHead = predecessorRule.getHead();
 			Predicate predecessorLiteralSubgoal = null;
 			for (Predicate literalSubgoal : rule.getLitertalSubgoals())
@@ -847,11 +847,11 @@ public class Rule {
 			{
 				DatalogVariable v_predecessor_head;
 				if (e instanceof DatalogVariable) v_predecessor_head = (DatalogVariable)e; else continue;
-				System.out.println("******************");
-				System.out.println(predecessorRuleHead);
-				System.out.println(predecessorRuleHead.getArgs());
-				System.out.println(predecessorLiteralSubgoal);
-				System.out.println(predecessorLiteralSubgoal.getArgs());
+//				System.out.println("******************");
+//				System.out.println(predecessorRuleHead);
+//				System.out.println(predecessorRuleHead.getArgs());
+//				System.out.println(predecessorLiteralSubgoal);
+//				System.out.println(predecessorLiteralSubgoal.getArgs());
 				DatalogVariable v_predecessor_subgaol = (DatalogVariable)predecessorLiteralSubgoal.getArgs().get(predecessorRuleHead.getArgs().indexOf(v_predecessor_head)); 
 				if (v_predecessor_head == predecessorPrimaryKeyVariable)
 					isPredecessorSourceNodeVariableUnncessaryNecessary = rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol);
@@ -916,9 +916,9 @@ public class Rule {
 
 				Rule predecessorRule = rewriteRuleDependency.get(primaryKeyVariable).iterator().next();
 				
-				System.out.println("HERE4");
+//				System.out.println("HERE4");
 				if (!predecessorRule.canProduceVariables(variablesInAggregateArgument)) continue;
-				System.out.println("HERE3");
+//				System.out.println("HERE3");
 				
 				boolean primaryKeyIsSameAsAggregationColumn = variablesInAggregateArgument.size() == 1 && variablesInAggregateArgument.contains(predecessor);
 				boolean primaryKeyIsDisjointFromAggregationColumn = !variablesInAggregateArgument.contains(predecessor);
@@ -934,7 +934,7 @@ public class Rule {
 				
 				if (primaryKeyIsSameAsAggregationColumn)
 				{
-					System.out.println("HERE1");
+//					System.out.println("HERE1");
 					predecessorRuleHead.addArg(aggregateArgument);
 					
 					predecessorLiteralSubgoal.addArg(newAggregationVariable);
@@ -953,7 +953,7 @@ public class Rule {
 				}
 				if (primaryKeyIsDisjointFromAggregationColumn)
 				{
-					System.out.println("HERE2");
+//					System.out.println("HERE2");
 					predecessorRuleHead.getArgs().removeAll(variablesInAggregateArgument);
 					predecessorRuleHead.addArg(aggregateArgument);
 

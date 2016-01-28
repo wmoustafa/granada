@@ -73,7 +73,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			int[] vertexKeyFields = new int[]{0};
 			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
-			Table vertexTable = new Table("vertex",vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length(), metadata);
+			Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length());
 
 			int nEdges = 0;
 			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
@@ -87,19 +87,19 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			
 			int[] edgeKeyFields = new int[]{0};
 			Class[] edgeFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table edgesTable = new Table("edges",edgeFieldTypes, edgeKeyFields, nEdges,metadata);
+			Table edgesTable = new Table(edgeFieldTypes, edgeKeyFields, nEdges);
 
 			int[] outgoingNeighborsKeyFields = new int[]{0};
 			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table outgoingNeighborsTable = new Table("outgoingNeighbors",outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, jsonSuperVertexValues.length(),metadata);
+			Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, jsonSuperVertexValues.length());
 
 			int[] incomingNeighborsKeyFields = new int[]{0};
 			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table incomingNeighborsTable = new Table("incomingNeighbors",incomingNeighborsFieldTypes, incomingNeighborsKeyFields, jsonSuperVertexValues.length(), metadata);
+			Table incomingNeighborsTable = new Table(incomingNeighborsFieldTypes, incomingNeighborsKeyFields, jsonSuperVertexValues.length());
 
 			int[] messagesKeyFields = new int[]{0};
 			Class[] messagesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table messagesTable = new Table("messages_full",messagesFieldTypes, messagesKeyFields,metadata);
+			Table messagesTable = new Table(messagesFieldTypes, messagesKeyFields);
 			messagesTable.setAggregationFunctionType(AggregationFunctionType.SUM);;
 
 			JSONArray jsonNeighborSuperVertices = jsonVertex.getJSONArray(3);
@@ -107,7 +107,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			int[] neighborSuperVerticesKeyFields = new int[]{0};
 			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table neighborSuperVerticesTable = new Table("neighborSuperVertices",neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, jsonNeighborSuperVertices.length(), metadata);
+			Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, jsonNeighborSuperVertices.length());
 			
 			////System.out.println(jsonSuperVertexValues.length() + " " + nEdges + " " + jsonNeighborSuperVertices.length());
 			////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);

@@ -39,7 +39,7 @@ public class DatalogWorkerContext extends WorkerContext {
 			conf = getConf();
 
 			FileSystem fs = FileSystem.get(conf);
-			FSDataInputStream in = fs.open(new Path("hdfs://jedi2.nec-labs.com:8020/user/hadoop/input/" + getProgramName() + ".txt"));
+			FSDataInputStream in = fs.open(new Path("hdfs://b09-11.sysnet.ucsd.edu:8020/user/hadoop/input/" + getProgramName() + ".txt"));
 
 			Parser parser = new Parser(in);
 			Program program = parser.program();
@@ -49,6 +49,9 @@ public class DatalogWorkerContext extends WorkerContext {
 			
 			g = new DatalogDependencyGraph(rewrittenProgram);
 			g.setRecursivePredicatesForRules();
+			
+			System.out.println("Semi-join=" + useSemiJoin() + ", Eager aggregation = " + useEagerAggregation());
+			
 			metadata = new Metadata();
 			int[] vertexKeyFields = new int[]{0};
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
@@ -120,6 +123,13 @@ public class DatalogWorkerContext extends WorkerContext {
 //	      
 //	      System.out.println("TOTAL Combine messages=" + (COMBINE_MSG/ONE_MILLION));
 //	      System.out.println("TOTAL Evaluate rule = " + (EVALUATE_RULE/ONE_MILLION));
+//		long SEND_MSG = this.<LongWritable>getAggregatedValue("SEND_MSG").get();
+//		long SEND_RECORDS = this.<LongWritable>getAggregatedValue("SEND_RECORDS").get();
+//		long COMPUTE_INVOCATIONS = this.<LongWritable>getAggregatedValue("COMPUTE_INVOCATIONS").get();
+
+//		System.out.println("TOTAL message = " + SEND_MSG);
+//		System.out.println("TOTAL number of records = " + SEND_RECORDS);
+//		System.out.println("TOTAL compute invocations = " + COMPUTE_INVOCATIONS);
 	}
 
 	public Program getRewrittenProgram()

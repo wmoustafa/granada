@@ -31,6 +31,7 @@ public class Predicate<T extends Expression> {
 		keyFields = p.keyFields;
 	}
 	
+	
 	public String getName()
 	{
 		return name;
@@ -74,11 +75,13 @@ public class Predicate<T extends Expression> {
 	
 	public Predicate<Expression> substitute(Map<? extends Expression, ? extends Expression> m)
 	{
-		Predicate<Expression> p_prime = new Predicate<Expression>(getName());
+		Predicate<Expression> p_prime = new Predicate<Expression>(this);
+		p_prime.args.clear();
 		for (T arg : getArgs()) p_prime.addArg(arg.substitute(m));
 		return p_prime;
 
 	}
+	
 	public String toString()
 	{
 		StringBuffer s = new StringBuffer();

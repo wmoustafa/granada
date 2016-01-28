@@ -27,12 +27,12 @@ public class ScanFilter extends Filter {
 		return f;
 	}
 
-	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
+	public void open(Database inputDatabase, Database outputDatabase) {
 		inputTable = inputDatabase
 				.getDataTableByName(inputTableAlias.tableName);
 		if (nextFilter != null) {
 			nextFilter.setInputCursor(cursor);
-			nextFilter.open(inputDatabase, outputDatabase, metadata);
+			nextFilter.open(inputDatabase, outputDatabase);
 		}
 	}
 

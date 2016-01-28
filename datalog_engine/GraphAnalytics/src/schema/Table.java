@@ -76,31 +76,21 @@ public class Table implements Writable {
 		this.keyFields = keyFields;
 		this.data = new Multimap();
 	}
-		
+	
+	public Table(Class[] fieldTypes, int[] keyFields, String name)
+	{
+		this.fieldTypes = fieldTypes;
+		this.keyFields = keyFields;
+		this.data = new Multimap();
+		this.name = name;
+	}
+	
+	
 	public Table(Class[] fieldTypes, int[] keyFields, int initialSize)
 	{
 		this.fieldTypes = fieldTypes;
 		this.keyFields = keyFields;
 		this.data = new Multimap(initialSize);
-	}
-	
-	public Table(String name, Class[] fieldTypes, int[] keyFields, Metadata metadata)
-	{
-		this.name = name;
-		this.fieldTypes = fieldTypes;
-		this.keyFields = keyFields;
-		this.metadata = metadata;
-		this.data = new Multimap();
-	}
-	
-	public Table(String name, Class[] fieldTypes, int[] keyFields, int initialSize, Metadata metadata)
-	{
-		this.name = name;
-		this.fieldTypes = fieldTypes;
-		this.keyFields = keyFields;
-		this.metadata = metadata;
-		this.data = new Multimap(initialSize);
-		
 	}
 
 	public void setAggregate()
@@ -150,6 +140,10 @@ public class Table implements Writable {
 		this.type = c;
 	}
 	
+	public void setName(String name){
+		this.name = name;
+	}
+	
 	public RelationalType getRelationalType()
 	{
 		return relationalType;
@@ -166,7 +160,7 @@ public class Table implements Writable {
 		int key = getKey(tuple);
 		data.put(key, tuple);
 	}
-
+	
 	public boolean addTuple(int key, Tuple value)
 	{
 		if (!isAggregate && data.contains(key, value)) return false; 
@@ -205,6 +199,7 @@ public class Table implements Writable {
 				}				
 			}
 		}
+//		System.out.println("Add tuple key = " + key + ", value = " + value);
 		data.put(key, value);
 		return true;
 	}
@@ -328,8 +323,9 @@ public class Table implements Writable {
 	
 	public int getKey(Tuple value)
 	{
-		//assert(keyFields.length == 1);
-		
+		assert(keyFields.length == 1);
+//		System.out.println("Add tupe " + value);
+//		System.out.println("Keyfields = " + Arrays.toString(keyFields));
 		//int[] keys = new int[keyFields.length];
 		//int[] tupleArray = value.toArray();
 		
@@ -341,12 +337,15 @@ public class Table implements Writable {
 	
 	public String toString()
 	{
+//		System.out.println("ToString");
 		//return String.valueOf(data.size());
 		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
 		for (Tuple tuple : data.values())
 		{
 			int j = 0;
+//			System.out.println("Key = " + String.valueOf(getKey(tuple)));
+//			System.out.println("Value = " + Arrays.toString(tuple.toArray()));
 			dataAsMatrix[i][j++] = String.valueOf(getKey(tuple));
 			for (Object value : tuple.toArray())
 				dataAsMatrix[i][j++] = value.toString();
@@ -632,7 +631,7 @@ public class Table implements Writable {
 	{
 		int[] messagesKeyFields = new int[]{0};
 		Class[] messagesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-		Table messagesTable = new Table("messages_full",messagesFieldTypes, messagesKeyFields, metadata);
+		Table messagesTable = new Table(messagesFieldTypes, messagesKeyFields);
 		messagesTable.setAggregationFunctionType(AggregationFunctionType.SUM);
 		messagesTable.setAggregate();	
 		return messagesTable;
@@ -727,37 +726,39 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		//byte[] byteArray = WritableUtils.readCompressedByteArray(in);
-		//int arrayLength = in.readInt();
-		//byte[] byteArray = new byte[arrayLength];
-		//in.readFully(byteArray);
-		//DataInputStream inStream = new DataInputStream(new ByteArrayInputStream(byteArray));
-		
-//		System.out.println("Metadata in reading table " + this.name + " = " + metadata);
-		int nFieldTypes = in.readInt();
-//		isRecursive = in.readBoolean();
-		isSourceNodeVariableUnncessary = in.readBoolean();
-//		relationalType = RelationalType.values()[in.readByte()];
-//		setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
-		fieldTypes = new Class[nFieldTypes];
-		
-//		-------------------------------------------
-//		for (int i = 0; i < nFieldTypes; i++)
-//		{
-//			byte fieldType = in.readByte();
-//			if (fieldType == 1) fieldTypes[i] = Integer.class;
-//			else if (fieldType == 0) fieldTypes[i] = String.class;
-//			else if (fieldType == 2) fieldTypes[i] = Boolean.class;
-//		}
-//		int nKeyFields = in.readInt();
-//		---------------------------------------------
-		
-		keyFields = new int[1];
-		keyFields[0] = in.readInt();
 
-		size = in.readInt();
-		data = new Multimap<>();
-		int index = isSourceNodeVariableUnncessary? 1:0;
+		if(this.name != null && this.name.equals("path_Y1727886952_OUTGOING"))
+		{
+			isSourceNodeVariableUnncessary = false;
+			fieldTypes = new Class[3];
+			keyFields = new int[1];
+			data = new Multimap<>();
+			keyFields[0] = 1;
+			size = in.readInt();
+			for (int i = 0; i < size; i++)
+			{
+				int key = in.readInt();
+				int[] array = new int[3];
+				array[0] = 0;
+				array[1] = key;
+				array[2] = in.readInt();
+				Tuple tuple = new Tuple(array);
+				addTuple(key,tuple);
+			}
+		}
+		else
+		{
+//			System.out.println("Reading whole thing");
+			int nFieldTypes = in.readInt();
+			isSourceNodeVariableUnncessary = in.readBoolean();
+			fieldTypes = new Class[nFieldTypes];
+			
+			keyFields = new int[1];
+			keyFields[0] = in.readInt();
+	
+			size = in.readInt();
+			data = new Multimap<>();
+			int index = isSourceNodeVariableUnncessary? 1:0;
 			for (int k = 0; k < size; k++)
 			{
 				
@@ -772,66 +773,43 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				}
 				Tuple tuple = new Tuple(array);
 				addTuple(tuple);
-			}
-		
-		//inStream.close();
+//				System.out.println("Reading tuple = " + tuple);
+			}	
+		}
 	}
 
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		//ByteArrayOutputStream byteArrayOutStream = new ByteArrayOutputStream();
-		//DataOutputStream outStream = new DataOutputStream(byteArrayOutStream);
-		//UnsafeByteArrayOutputStream outStream = new UnsafeByteArrayOutputStream();
-		
-		out.writeInt(fieldTypes.length);
-//		out.writeBoolean(isRecursive);
-		out.writeBoolean(isSourceNodeVariableUnncessary);		
-//		out.writeByte(relationalType.ordinal());
-//		out.writeByte(aggregationFunctionType.ordinal());
-		
-//		-----------------------------------------------
-//		for (Class fieldType : fieldTypes)
-//			if (fieldType == Integer.class) out.writeByte(1);
-//			else if (fieldType == String.class) out.writeByte(0);
-//			else if (fieldType == Boolean.class) out.writeByte(2);
-//
-//		out.writeInt( keyFields.length);
-//		for (int keyField : keyFields)
-//		--------------------------------------------
-		
-		//TODO assumption keys of a table is only one
-		out.writeInt(keyFields[0]);
-		
-		out.writeInt(data.size());
-		int index;
-		index = isSourceNodeVariableUnncessary? 1:0;
-//		System.out.println("In write table " + this.name);
-//		System.out.println("Table data = " + this);
-//		System.out.println("Printing stack trace:");
-//		StackTraceElement[] elements = Thread.currentThread().getStackTrace();
-//		for (int i = 1; i < elements.length; i++) {
-//			StackTraceElement s = elements[i];
-//			System.out.println("\tat " + s.getClassName() + "." + s.getMethodName()
-//					+ "(" + s.getFileName() + ":" + s.getLineNumber() + ")");
-//		}
-		for (Tuple tuple : data.values())
+		//TODO testing out an idea of sending smaller messages
+		if(name != null && name.equals("path_Y1727886952_OUTGOING") )
 		{
-			int[] array = tuple.toArray(); 
-			for (int i = index; i < array.length; i++)
+			out.writeInt(data.size());
+			for (Tuple tuple : data.values())
 			{
-				out.writeInt(array[i]);
-//				System.out.println("Sending: " + array[i]);
+				int[] array = tuple.toArray();
+				out.writeInt(array[keyFields[0]]);
+				out.writeInt(array[array.length-1]);
 			}
 		}
-		
-		
-		
-		//outStream.flush();
-		//WritableUtils.writeCompressedByteArray(out, byteArrayOutStream.toByteArray());
-		//byte[] byteArray = outStream.toByteArray();
-		//out.writeInt(byteArray.length);
-		//out.write(byteArray);
-		//outStream.close();
+		else
+		{
+			out.writeInt(fieldTypes.length);
+			out.writeBoolean(isSourceNodeVariableUnncessary);		
+			//TODO assumption keys of a table is only one
+			out.writeInt(keyFields[0]);
+			out.writeInt(data.size());
+			int index;
+			index = isSourceNodeVariableUnncessary? 1:0;
+	
+			for (Tuple tuple : data.values())
+			{
+				int[] array = tuple.toArray(); 
+				for (int i = index; i < array.length; i++)
+				{
+					out.writeInt(array[i]);
+				}
+			}
+		}
 	}
 }

@@ -51,7 +51,7 @@ public class GroupByFilter extends Filter {
 		this.isRecursive = isRecursive;
 		this.isSourceNodeVariableUnncessary = isSourceNodeVariableUnncessary;
 		this.aggregationFunctionType = aggregationFunctionType;
-
+//		System.out.println("GroupBy constructor. OutputTable = " + outputTableName + ", keyFields=" + Arrays.toString(keyFields));
 	}
 	
 	public Filter duplicate() {
@@ -62,12 +62,12 @@ public class GroupByFilter extends Filter {
 	}
 
 	@Override
-	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
+	public void open(Database inputDatabase, Database outputDatabase) {
 		aggregateValues = new HashMap<Tuple, Integer>();
 
 		if (!outputDatabase.exists(outputTableName))
 		{
-			outputTable = new Table(outputTableName, types, keyFields, metadata);
+			outputTable = new Table(types, keyFields);
 			outputDatabase.addDataTable(outputTableName, outputTable);
 		}
 		else
@@ -76,7 +76,6 @@ public class GroupByFilter extends Filter {
 		if (isRecursive) outputTable.setRecursive();
 		if (isSourceNodeVariableUnncessary) outputTable.setSourceNodeVariableUnncessary();
 		outputTable.setRelationalType(relationalType);
-		metadata.setMetadata(outputTableName, keyFields, types, relationalType, isRecursive, isSourceNodeVariableUnncessary, aggregationFunctionType);
 	}
 
 	@Override
@@ -109,8 +108,10 @@ public class GroupByFilter extends Filter {
 	
 	public void close()
 	{
+//		System.out.println("GroupBy output table name = " + outputTableName + ", keyFields = " + Arrays.toString(keyFields));
 		for (Tuple values : aggregateValues.keySet())
 		{
+//			System.out.println("Tuple = " + values);
 			int[] outputTuple = new int[values.toArray().length+1];
 			int i=0; 
 			for (int o : values.toArray()) outputTuple[i++]=o;
