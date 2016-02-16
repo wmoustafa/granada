@@ -38,9 +38,9 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 //			long COMBINE_MSG = this.<LongWritable>getAggregatedValue("COMBINE_MSG").get();
 //			long REFRESH_DB = this.<LongWritable>getAggregatedValue("REFRESH_DB").get();
 //			long EVALUATE_RULE = this.<LongWritable>getAggregatedValue("EVALUATE_RULE").get();
-			long SEND_MSG = this.<LongWritable>getAggregatedValue("SEND_MSG").get();
-			long SEND_RECORDS = this.<LongWritable>getAggregatedValue("SEND_RECORDS").get();
-			long COMPUTE_INVOCATIONS = this.<LongWritable>getAggregatedValue("COMPUTE_INVOCATIONS").get();
+//			long SEND_MSG = this.<LongWritable>getAggregatedValue("SEND_MSG").get();
+//			long SEND_RECORDS = this.<LongWritable>getAggregatedValue("SEND_RECORDS").get();
+//			long COMPUTE_INVOCATIONS = this.<LongWritable>getAggregatedValue("COMPUTE_INVOCATIONS").get();
 //			long COMPUTE_TIME = this.<LongWritable>getAggregatedValue("COMPUTE_TIME").get();
 //			long PARTITION_MSG = this.<LongWritable>getAggregatedValue("PARTITION_MSG").get();
 //			long COMBINE_OUTPUT = this.<LongWritable>getAggregatedValue("COMBINE_OUTPUT").get();
@@ -56,14 +56,14 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 //					+ ", TOTAL Send message = " + (SEND_MSG/ONE_MILLION)
 //					+ ", TOTAL Compute Time =" + (COMPUTE_TIME/ONE_MILLION));
 
-			sum_msg+=SEND_MSG;
-			sum_records+=SEND_RECORDS;
-			sum_invocations+=COMPUTE_INVOCATIONS;
-			
-			
-			System.out.println("2TOTAL message = " + sum_msg);
-			System.out.println("2TOTAL number of records = " + sum_records);
-			System.out.println("2TOTAL compute invocations = " + sum_invocations);
+//			sum_msg+=SEND_MSG;
+//			sum_records+=SEND_RECORDS;
+//			sum_invocations+=COMPUTE_INVOCATIONS;
+//			
+//			
+//			System.out.println("2TOTAL message = " + sum_msg);
+//			System.out.println("2TOTAL number of records = " + sum_records);
+//			System.out.println("2TOTAL compute invocations = " + sum_invocations);
 			
 			
 		if (getSuperstep() > 0) {
@@ -87,21 +87,21 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 
 			Program rewrittenProgram = program.rewrite(useSemiJoin(), useEagerAggregation());
 
-//			//System.out.println(" REWRITTEN PROGRAM:");
+			System.out.println(" REWRITTEN PROGRAM:");
 			for (Rule rule : rewrittenProgram.getRules())
 			{
 				String aggregator = rule.getHead().getName();
-//				//System.out.println(rule + " rel:" + rule.getRelationalType() + " agg:" + rule.isAggregate());
+				System.out.println(rule + " rel:" + rule.getRelationalType() + " agg:" + rule.isAggregate());
 				registerAggregator(aggregator, BooleanOrAggregator.class);
 				aggregators.add(aggregator);
 			}
 			registerAggregator("HALT_COMPUTATION", BooleanAndAggregator.class);
+//			registerAggregator("SEND_MSG", LongSumAggregator.class);
+//			registerAggregator("SEND_RECORDS", LongSumAggregator.class);
+//			registerAggregator("COMPUTE_INVOCATIONS", LongSumAggregator.class);			
 //			registerAggregator("COMBINE_MSG", LongSumAggregator.class);
 //			registerAggregator("EVALUATE_RULE", LongSumAggregator.class);
 //			registerAggregator("REFRESH_DB", LongSumAggregator.class);
-			registerAggregator("SEND_MSG", LongSumAggregator.class);
-			registerAggregator("SEND_RECORDS", LongSumAggregator.class);
-			registerAggregator("COMPUTE_INVOCATIONS", LongSumAggregator.class);
 //			registerAggregator("COMPUTE_TIME", LongSumAggregator.class);
 //			registerAggregator("PARTITION_MSG", LongSumAggregator.class);
 //			registerAggregator("COMBINE_OUTPUT", LongSumAggregator.class);

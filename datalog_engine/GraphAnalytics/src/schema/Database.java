@@ -104,6 +104,12 @@ public class Database implements Writable {
 				table.readFields(in);
 				tables.put("path_Y1727886952_OUTGOING", table);
 			}
+			else if(tableName.equals("z"))
+			{
+				table = new Table(null, null, "wcc_Y-323738959_OUTGOING");
+				table.readFields(in);
+				tables.put("wcc_Y-323738959_OUTGOING", table);
+			}
 			else
 			{
 				table = new Table(null, null);
@@ -115,7 +121,6 @@ public class Database implements Writable {
 
 
 	public void write(DataOutput out) throws IOException {
-//		System.out.println("Metadata in write database = " + metadata);
 		out.writeInt(tables.entrySet().size());
 		for (Map.Entry<String, Table> entry : tables.entrySet())
 		{
@@ -124,6 +129,8 @@ public class Database implements Writable {
 			//Vicky TODO: testing for performance optimization
 			if(tableName.equals("path_Y1727886952_OUTGOING"))
 				out.writeUTF("y");
+			else if(tableName.equals("wcc_Y-323738959_OUTGOING")) 
+				out.writeUTF("z");
 			else
 				out.writeUTF(tableName);
 			table.write(out);

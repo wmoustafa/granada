@@ -11,7 +11,6 @@ import java.util.Set;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.log4j.Logger;
 
@@ -47,7 +46,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			boolean isPagerank = wc.getProgramName().equals("pagerank");
 			Metadata metadata = wc.metadata;
 			HashMap<Integer, SuperVertexId> neighbors = new HashMap<>();
-			aggregate("COMPUTE_INVOCATIONS", new LongWritable(1));			
+//			aggregate("COMPUTE_INVOCATIONS", new LongWritable(1));			
 			
 			Database inputDatabase = vertex.getValue();
 //			System.out.println("Vertex value = " + vertex.getValue());
@@ -56,42 +55,10 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
 			Database messagesDb = new Database();
 			
-			//TODO testing out an idea to sent smaller messages
-			// 1. Retrieve key of tuple
-			// 2. Create tuple, only last column changes based on received msg
-//			int vertex_id = vertex.getId().vertexId;			
-//			int[] array = new int[3];	
-//			array[0] = 0;
-//			for(Database message: messages) {
-////				System.out.println("Message database received=" + message);
-//				assert(message.exists("path_Y1727886952_OUTGOING"));
-//				Table msg = message.getDataTableByName("path_Y1727886952_OUTGOING");
-////				System.out.println("Messages table= " + msg);
-//				assert(msg.size() == 1);
-//				int key = msg.getData().values().iterator().next().toArray()[1];
-//				int value = msg.getData().values().iterator().next().toArray()[2];
-////				System.out.println("Vertex id = " + vertex_id + ", key = " + key);
-////				System.out.println("Received value = " + value);
-//				array[1] = key;
-//				array[2] = value;
-//				Class[] fieldTypes = new Class[3];
-//				int[] keyFields = new int[1];
-//				keyFields[0] = 1;
-//				Table new_table = new Table(fieldTypes,keyFields);
-//				new_table.addTuple(vertex_id, new Tuple(array));
-////				System.out.println("New msg table = " + Arrays.toString(new_table.getData().values().iterator().next().toArray()));
-//				message.removeDataTable("path_Y1727886952_OUTGOING");
-////				System.out.println("Messages database after removing = " + message);
-//				message.addDataTable("path_Y1727886952_OUTGOING", new_table);
-////				System.out.println("Message database created = " + message);
-//				messagesDb.combine2(message);
-//				System.out.println("Message DB after combining=" + messagesDb);
-//			}
-
 			for (Database message : messages){
-				messagesDb.combine2(message);
-//				System.out.println("Message database after combining=" + message);
+				messagesDb.combine2(message);				
 			}
+//			System.out.println("Message database after combining=" + messagesDb);
 					
 			//the following line is important. in case there were no messages, this has to be cleaned manually
 			//, or other wise it will end up with messages from the past.
@@ -148,8 +115,8 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					Database neighborDb = entry.getValue();
 					sendMessage(neighborId, neighborDb);
 //					System.out.println("SENT " + neighborDb + "TO NEIGHBOR: " + neighborId);
-					aggregate("SEND_RECORDS", new LongWritable(neighborDb.getDataTableByName("path_Y1727886952").size()));
-					aggregate("SEND_MSG", new LongWritable(1));
+//					aggregate("SEND_RECORDS", new LongWritable(neighborDb.getDataTableByName("path_Y1727886952_OUTGOING").size()));
+//					aggregate("SEND_MSG", new LongWritable(1));
 				}
 			}
 			

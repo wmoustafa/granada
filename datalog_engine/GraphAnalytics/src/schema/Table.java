@@ -727,8 +727,12 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void readFields(DataInput in) throws IOException {
 
-		if(this.name != null && this.name.equals("path_Y1727886952_OUTGOING"))
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
+				name.equals("wcc_Y-323738959_OUTGOING")))
 		{
+			isRecursive = in.readBoolean();
+			relationalType = RelationalType.values()[in.readByte()];
+			setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
 			isSourceNodeVariableUnncessary = false;
 			fieldTypes = new Class[3];
 			keyFields = new int[1];
@@ -748,13 +752,25 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 		}
 		else
 		{
-//			System.out.println("Reading whole thing");
 			int nFieldTypes = in.readInt();
+			isRecursive = in.readBoolean();
 			isSourceNodeVariableUnncessary = in.readBoolean();
+			relationalType = RelationalType.values()[in.readByte()];
+			setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
 			fieldTypes = new Class[nFieldTypes];
-			
-			keyFields = new int[1];
-			keyFields[0] = in.readInt();
+						
+			for (int i = 0; i < nFieldTypes; i++)
+			{
+				byte fieldType = in.readByte();
+				if (fieldType == 1) fieldTypes[i] = Integer.class;
+				else if (fieldType == 0) fieldTypes[i] = String.class;
+				else if (fieldType == 2) fieldTypes[i] = Boolean.class;
+			}
+
+			int nKeyFields = in.readInt();
+			keyFields = new int[nKeyFields];
+			for (int i = 0; i < nKeyFields; i++)
+				keyFields[i] = in.readInt();
 	
 			size = in.readInt();
 			data = new Multimap<>();
@@ -773,7 +789,6 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				}
 				Tuple tuple = new Tuple(array);
 				addTuple(tuple);
-//				System.out.println("Reading tuple = " + tuple);
 			}	
 		}
 	}
@@ -782,8 +797,12 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void write(DataOutput out) throws IOException {
 		//TODO testing out an idea of sending smaller messages
-		if(name != null && name.equals("path_Y1727886952_OUTGOING") )
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
+				name.equals("wcc_Y-323738959_OUTGOING")))
 		{
+			out.writeBoolean(isRecursive);			
+			out.writeByte(relationalType.ordinal());
+			out.writeByte(aggregationFunctionType.ordinal());
 			out.writeInt(data.size());
 			for (Tuple tuple : data.values())
 			{
@@ -792,13 +811,26 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				out.writeInt(array[array.length-1]);
 			}
 		}
+		
 		else
 		{
+			
 			out.writeInt(fieldTypes.length);
+			out.writeBoolean(isRecursive);			
 			out.writeBoolean(isSourceNodeVariableUnncessary);		
-			//TODO assumption keys of a table is only one
-			out.writeInt(keyFields[0]);
+			out.writeByte(relationalType.ordinal());
+			out.writeByte(aggregationFunctionType.ordinal());
+			for (Class fieldType : fieldTypes)
+				if (fieldType == Integer.class) out.writeByte(1);
+				else if (fieldType == String.class) out.writeByte(0);
+				else if (fieldType == Boolean.class) out.writeByte(2);
+
+			out.writeInt( keyFields.length);
+			for (int keyField : keyFields)
+				out.writeInt(keyField);
+			
 			out.writeInt(data.size());
+			
 			int index;
 			index = isSourceNodeVariableUnncessary? 1:0;
 	
@@ -809,7 +841,9 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				{
 					out.writeInt(array[i]);
 				}
-			}
+			}			
+			
+			
 		}
 	}
 }

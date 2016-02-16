@@ -120,8 +120,10 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
 				int[] vertexTuple = new int[jsonVertexTuple.length()];
+//				System.out.println("Size of vertex tuple = " + jsonVertexTuple.length());
 				for (int j = 0; j < jsonVertexTuple.length(); j++)
 				{
+//					System.out.println("vertexTuple["+j+"] =" + jsonVertexTuple.getInt(j));
 					if (vertexFieldTypes[j] == String.class) 
 						throw new RuntimeException("String: Unsupported data type");
 					else if (vertexFieldTypes[j] == Integer.class) 
