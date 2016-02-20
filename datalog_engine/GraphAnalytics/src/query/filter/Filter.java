@@ -2,11 +2,11 @@ package query.filter;
 
 import java.util.Iterator;
 
+import evaluation.Cursor;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
 import schema.Tuple;
-import evaluation.Cursor;
 
 public abstract class Filter {
 	
@@ -22,7 +22,7 @@ public abstract class Filter {
 	Filter nextFilter=null;
 	Cursor cursor=null;
 	
-	public abstract void open(Database inputDatabase, Database outputDatabase);
+	public abstract void open(Database inputDatabase, Database outputDatabase, Metadata metadata);
 	public abstract void next();
 	public abstract String toString();
 
@@ -59,13 +59,13 @@ public abstract class Filter {
 		if (nextFilter!=null) nextFilter.close();
 		
 	}
-	public Database evaluate(Database inputDatabase)
+	public Database evaluate(Database inputDatabase,Metadata metadata)
 	{
 		Database outputDatabase = new Database();
 		int cursorSize = 0;
 		for (Filter f = this; f != null; f = f.nextFilter) cursorSize++;
 		cursor = new Cursor(cursorSize - 1);
-		open(inputDatabase, outputDatabase);		
+		open(inputDatabase, outputDatabase, metadata);		
 		if (cursor!=null) next();
 		close();
 //		System.out.println("Evaluate plan:");

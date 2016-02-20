@@ -9,12 +9,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.LongWritable;
 
-import parser.Parser;
-import schema.Metadata;
 import algebra.Program;
 import algebra.Rule;
+import parser.Parser;
+import schema.Metadata;
 
 public class DatalogWorkerContext extends WorkerContext {
 
@@ -102,7 +101,7 @@ public class DatalogWorkerContext extends WorkerContext {
 //		System.out.println("-----> Now going to process: " +rulesToProcess);
 		////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
 		for (Rule rule : rulesToProcess)
-			rule.generateEvaluationPlan(null, metadata);
+			rule.generateEvaluationPlan(null,metadata);
 		aggregate("HALT_COMPUTATION", new BooleanWritable(rulesToProcess.isEmpty()));
 		firstVertex = true;
 		

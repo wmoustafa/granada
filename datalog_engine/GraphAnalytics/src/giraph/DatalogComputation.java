@@ -11,6 +11,7 @@ import java.util.Set;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.log4j.Logger;
 
@@ -44,9 +45,13 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
 			boolean isPagerank = wc.getProgramName().equals("pagerank");
-			Metadata metadata = wc.metadata;
 			HashMap<Integer, SuperVertexId> neighbors = new HashMap<>();
-//			aggregate("COMPUTE_INVOCATIONS", new LongWritable(1));			
+			Metadata metadata = wc.metadata;
+			long start, end;
+			long total_start, total_end;
+			
+			aggregate("COMPUTE_INVOCATIONS", new LongWritable(1));			
+			total_start = System.nanoTime();
 			
 			Database inputDatabase = vertex.getValue();
 //			System.out.println("Vertex value = " + vertex.getValue());
@@ -55,38 +60,56 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
 			Database messagesDb = new Database();
 			
+			start = System.nanoTime();
 			for (Database message : messages){
 				messagesDb.combine2(message);				
 			}
 //			System.out.println("Message database after combining=" + messagesDb);
-					
+			end = System.nanoTime();
+			aggregate("COMBINE_MSG", new LongWritable(end-start));
+			
 			//the following line is important. in case there were no messages, this has to be cleaned manually
 			//, or other wise it will end up with messages from the past.
 			//in case of sum aggregate, those messages will keep increasing the value of the things they join with
+			start = System.nanoTime();
 			inputDatabase.removeRelationalDeltaTables(); 
+			end = System.nanoTime();
+			aggregate("REMOVE_TABLES", new LongWritable(end-start));
 			
 			Set<String> changedTables = new HashSet<>();
 
+			start = System.nanoTime();
 			Set<String> changed = inputDatabase.refresh(messagesDb);
+			end = System.nanoTime();
+			aggregate("REFRESH_DB", new LongWritable(end-start));
 			
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			for (Rule rule : rulesToProcess)
 			{
+				start = System.nanoTime();
 //				System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
-				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase);
+				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
 //				System.out.println("Output:" + outputDatabase);
+				end = System.nanoTime();
+				aggregate("EVALUATE_RULE", new LongWritable(end-start));
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
+					start = System.nanoTime();
 					changed = inputDatabase.refresh(outputDatabase);
 //					System.out.println("Refresh input with output: " + inputDatabase);
+					end = System.nanoTime();
+					aggregate("REFRESH_OUTPUT", new LongWritable(end-start));
 				}
 				else
 				{
+					start = System.nanoTime();
 //					System.out.println("Combine relationalDatase with output " );
 //					System.out.println("Before combine: relational database: " + relationalDatabase);
 					changed = relationalDatabase.combine2(outputDatabase);
 					changedTables.addAll(changed);
+					end = System.nanoTime();
+					aggregate("COMBINE_OUTPUT", new LongWritable(end-start));
 //					System.out.println("After combine: relational database: " + relationalDatabase);
 				}
 			}
@@ -96,19 +119,24 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 
 			if (!relationalDatabase.isEmpty())
 			{
+				start = System.nanoTime();
 				Map<SuperVertexId, Database> superVertexIdToDatabase = null;
 				if (!useSemiAsync && !useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertex(inputDatabase);
 				else if (!useSemiAsync && useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
-					getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors, metadata);
+					getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors);
 				else if (useSemiAsync && !useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessages(inputDatabase, isPagerank);
 				else if (useSemiAsync && useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
+				end = System.nanoTime();
+				aggregate("PARTITION_MSG", new LongWritable(end-start));
+				
+				start = System.nanoTime();
 				for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
 				{
 					SuperVertexId neighborId = entry.getKey();
@@ -116,13 +144,17 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					sendMessage(neighborId, neighborDb);
 //					System.out.println("SENT " + neighborDb + "TO NEIGHBOR: " + neighborId);
 //					aggregate("SEND_RECORDS", new LongWritable(neighborDb.getDataTableByName("path_Y1727886952_OUTGOING").size()));
-//					aggregate("SEND_MSG", new LongWritable(1));
+					aggregate("SEND_MSG", new LongWritable(1));
 				}
+				end = System.nanoTime();
+				aggregate("SEND_MSG_TIME", new LongWritable(end-start));
 			}
 			
 
 			vertex.setValue(inputDatabase);
 			vertex.voteToHalt();
+			total_end = System.nanoTime();
+			aggregate("COMPUTE_TIME", new LongWritable(total_end-total_start));
 //		}
 //		catch (Exception e) 
 //		{			

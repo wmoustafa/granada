@@ -2,13 +2,13 @@ package query.filter;
 
 import java.util.Arrays;
 
+import evaluation.TableAlias;
 import maputil.Multimap;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
-import evaluation.TableAlias;
 
 public class ScanFilter extends Filter {
 
@@ -27,12 +27,12 @@ public class ScanFilter extends Filter {
 		return f;
 	}
 
-	public void open(Database inputDatabase, Database outputDatabase) {
+	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
 		inputTable = inputDatabase
 				.getDataTableByName(inputTableAlias.tableName);
 		if (nextFilter != null) {
 			nextFilter.setInputCursor(cursor);
-			nextFilter.open(inputDatabase, outputDatabase);
+			nextFilter.open(inputDatabase, outputDatabase, metadata);
 		}
 	}
 

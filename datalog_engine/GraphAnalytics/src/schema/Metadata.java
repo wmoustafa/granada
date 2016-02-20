@@ -3,11 +3,9 @@ package schema;
 import java.util.HashMap;
 import java.util.Map;
 
+import algebra.RelationalType;
 import parser.Expression;
 import utils.AggregationFunctionType;
-import algebra.RelationalType;
-
-import com.google.common.collect.HashBiMap;
 
 public class Metadata {
 	

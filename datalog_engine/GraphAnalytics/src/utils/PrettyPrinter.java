@@ -1,6 +1,5 @@
 package utils;
 import static java.lang.String.format;
-import java.io.PrintStream;
 
 public class PrettyPrinter {
 

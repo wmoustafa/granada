@@ -1,15 +1,5 @@
 package main;
 
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import maputil.ObjObjMap;
-import parser.Term;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
-
 public class Test {
 
 	public static void main(String[] args) {

@@ -2,14 +2,14 @@ package query.filter;
 
 import java.util.Arrays;
 
+import evaluation.Cursor;
+import evaluation.TableAlias;
 import maputil.Multimap;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
-import evaluation.Cursor;
-import evaluation.TableAlias;
 	
 public class HashJoinFilter extends Filter {
 
@@ -34,12 +34,12 @@ public class HashJoinFilter extends Filter {
 		return f;
 	}
 	
-	public void open(Database inputDatabase, Database outputDatabase)
+	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata)
 	{
 		if (nextFilter!=null) 
 		{
 			nextFilter.setInputCursor(cursor);
-			nextFilter.open(inputDatabase, outputDatabase);
+			nextFilter.open(inputDatabase, outputDatabase, metadata);
 		}
 		Table rhsDataTable = inputDatabase.getDataTableByName(rhsTableAlias.tableName);
 //		System.out.println("rhsTableAlias.tableName = " + rhsTableAlias.tableName);
@@ -50,7 +50,7 @@ public class HashJoinFilter extends Filter {
 			
 			if (buildRightHashTable && rhsExpressions.length != 0)
 			{
-				System.out.println("Creating hash index for Join");
+//				System.out.println("Creating hash index for Join");
 				results = rhsDataTable.getData().values().iterator();		
 				Cursor rhsCursor = new Cursor(rhsTableAlias.sequenceNumber + 1);
 				rightBuild = new Multimap(); 

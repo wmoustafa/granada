@@ -1,7 +1,5 @@
 package giraph;
 
-import org.apache.giraph.combiner.MessageCombiner;
-
 import schema.Database;
 
 public class DatalogMessageCombiner 

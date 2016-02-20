@@ -1,10 +1,9 @@
 package maputil;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public class Multimap<Integer,Tuple> {
 	

@@ -18,7 +18,8 @@
 
 package giraph.partition;
 
-import com.google.common.collect.Lists;
+import java.util.Collection;
+import java.util.List;
 
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionBalancer;
@@ -30,11 +31,10 @@ import org.apache.giraph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.NullWritable;
 
-import schema.Database;
-import giraph.SuperVertexId;
+import com.google.common.collect.Lists;
 
-import java.util.Collection;
-import java.util.List;
+import giraph.SuperVertexId;
+import schema.Database;
 
 /**
  * Implements hash-based partitioning from the id hash code.

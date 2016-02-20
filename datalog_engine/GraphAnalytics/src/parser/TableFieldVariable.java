@@ -4,7 +4,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import main.Main;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;

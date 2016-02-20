@@ -1,12 +1,6 @@
 package query.filter;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 
 import algebra.RelationalType;
 import parser.Expression;
@@ -62,7 +56,7 @@ public class GroupByFilter extends Filter {
 	}
 
 	@Override
-	public void open(Database inputDatabase, Database outputDatabase) {
+	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
 		aggregateValues = new HashMap<Tuple, Integer>();
 
 		if (!outputDatabase.exists(outputTableName))
@@ -121,6 +115,7 @@ public class GroupByFilter extends Filter {
 		}
 		//Log.DEBUG("***************************************************");
 			//Log.DEBUG(this);
+		System.out.println("Close GroupBy fields = " + types.length);
 		if (nextFilter!=null) nextFilter.close();
 	}
 	public String toString()

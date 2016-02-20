@@ -1,27 +1,23 @@
 package evaluation;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import main.Main;
 import algebra.RelationalExpression;
 import algebra.RelationalType;
-import parser.TableFieldVariable;
 import parser.Expression;
+import parser.TableFieldVariable;
 import parser.UserDefinedFunction;
 import query.filter.Filter;
 import query.filter.GroupByFilter;
 import query.filter.HashJoinFilter;
 import query.filter.ProjectFilter;
 import query.filter.ScanFilter;
-import schema.Database;
 import schema.Metadata;
 import utils.AggregationFunctionType;
 
@@ -91,7 +87,7 @@ public class PlanGenerator {
 				}
 				else
 				{
-					HashJoinFilter hashJoin = createHashJoinFilter(metadata, tableAlias);
+					HashJoinFilter hashJoin = createHashJoinFilter(metadata,tableAlias);
 					previousFilter.setNextFilter(hashJoin);
 					previousFilter = hashJoin;
 				}
@@ -118,7 +114,7 @@ public class PlanGenerator {
 	
 
 
-	private HashJoinFilter createHashJoinFilter(Metadata metadata, TableAlias rhsTableAlias)
+	private HashJoinFilter createHashJoinFilter(Metadata metadata,TableAlias rhsTableAlias)
 	{
 		int[] rhsTableKeyFields = metadata.getKeyFields(rhsTableAlias.tableName);
 		List<Integer> rhsTableKeyFieldsList = new ArrayList<Integer>();

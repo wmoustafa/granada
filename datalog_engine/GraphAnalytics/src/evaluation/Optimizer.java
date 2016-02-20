@@ -3,7 +3,6 @@ package evaluation;
 import java.util.Hashtable;
 import java.util.Map;
 
-import main.Main;
 import schema.Database;
 
 public class Optimizer {

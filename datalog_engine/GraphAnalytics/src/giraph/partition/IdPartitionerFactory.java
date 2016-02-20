@@ -18,19 +18,15 @@
 
 package giraph.partition;
 
-import giraph.SuperVertexId;
-
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.partition.GraphPartitionerFactory;
-import org.apache.giraph.partition.HashWorkerPartitioner;
 import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.worker.LocalData;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
+import giraph.SuperVertexId;
 import schema.Database;
 
 /**

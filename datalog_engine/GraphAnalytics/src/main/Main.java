@@ -1,20 +1,9 @@
 package main;
 
-import java.io.FileInputStream;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.apache.giraph.GiraphRunner;
 
 import algebra.Program;
-import algebra.Rule;
-import parser.DatalogVariable;
-import parser.Operation;
-import parser.Parser;
-import parser.StringConst;
 import schema.Table;
-import schema.Database;
-import schema.Tuple;
 
 public class Main {
 

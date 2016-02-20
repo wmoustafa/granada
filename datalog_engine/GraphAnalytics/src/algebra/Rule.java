@@ -15,9 +15,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.collections.MultiMap;
-import org.python.antlr.runtime.RuleReturnScope;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
@@ -27,13 +24,10 @@ import evaluation.PossibleOrder;
 import evaluation.PossibleOrderSpace;
 import parser.DatalogVariable;
 import parser.Expression;
-import parser.IntegerConst;
-import parser.Operation;
 import parser.UserDefinedFunction;
 import query.filter.Filter;
 import schema.Database;
 import schema.Metadata;
-import utils.Log;
 
 public class Rule {
 	

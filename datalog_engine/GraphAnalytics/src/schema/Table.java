@@ -1,40 +1,24 @@
 package schema;
 
-import giraph.SuperVertexId;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import maputil.GoogleMultimap;
-import maputil.Multimap;
-
-import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
 
-import parser.IntegerConst;
+import algebra.RelationalType;
+import giraph.SuperVertexId;
+import maputil.Multimap;
 import utils.AggregationFunctionType;
 import utils.PrettyPrinter;
-import algebra.RelationalType;
 
 
 
@@ -337,7 +321,7 @@ public class Table implements Writable {
 	
 	public String toString()
 	{
-//		System.out.println("ToString");
+//		System.out.println("Field types = " + fieldTypes.length);
 		//return String.valueOf(data.size());
 		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
@@ -727,9 +711,13 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void readFields(DataInput in) throws IOException {
 
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
-				name.equals("wcc_Y-323738959_OUTGOING")))
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ))
 		{
+			
+//			for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+//		          System.out.println(ste);
+//		        }
+			
 			isRecursive = in.readBoolean();
 			relationalType = RelationalType.values()[in.readByte()];
 			setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
@@ -797,9 +785,11 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void write(DataOutput out) throws IOException {
 		//TODO testing out an idea of sending smaller messages
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
-				name.equals("wcc_Y-323738959_OUTGOING")))
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ))
 		{
+//			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//			DataOutputStream w = new DataOutputStream(baos);
+
 			out.writeBoolean(isRecursive);			
 			out.writeByte(relationalType.ordinal());
 			out.writeByte(aggregationFunctionType.ordinal());
@@ -810,11 +800,14 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				out.writeInt(array[keyFields[0]]);
 				out.writeInt(array[array.length-1]);
 			}
+//			w.flush();
+////			byte[] result = baos.toByteArray();
+//			out.write(baos.toByteArray());
 		}
 		
 		else
 		{
-			
+//			System.out.println("Write field types length = " + fieldTypes.length);
 			out.writeInt(fieldTypes.length);
 			out.writeBoolean(isRecursive);			
 			out.writeBoolean(isSourceNodeVariableUnncessary);		

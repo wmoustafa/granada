@@ -10,13 +10,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
 import algebra.Predicate;
 import algebra.Program;
 import algebra.RelationalType;
 import algebra.Rule;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 
 
 public class DatalogDependencyGraph {

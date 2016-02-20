@@ -1,8 +1,5 @@
 package schema;
 
-import giraph.DatalogWorkerContext;
-import giraph.SuperVertexId;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -14,17 +11,17 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
-
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.io.Writable;
 
+import algebra.RelationalType;
+import giraph.SuperVertexId;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
-import algebra.RelationalType;
 
 public class Database implements Writable {
 	
@@ -98,6 +95,7 @@ public class Database implements Writable {
 			//TODO Vicky test for performance send an integer id as table name instead of large string
 			String tableName = in.readUTF();
 			Table table = null;
+//			System.out.println("Read Table name = " + tableName);
 			if(tableName.equals("y"))
 			{
 				table = new Table(null, null, "path_Y1727886952_OUTGOING");
@@ -127,6 +125,7 @@ public class Database implements Writable {
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			//Vicky TODO: testing for performance optimization
+//			System.out.println("Write Table name = " + tableName);
 			if(tableName.equals("path_Y1727886952_OUTGOING"))
 				out.writeUTF("y");
 			else if(tableName.equals("wcc_Y-323738959_OUTGOING")) 
@@ -295,6 +294,7 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
+//			System.out.println("Relational database table = " + tableName);
 			if (!(table.getRelationalType() == RelationalType.NOT_RELATIONAL)) 
 				relationalDatabase.addDataTable(tableName, table);
 		}
@@ -338,7 +338,7 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, HashMap<Integer, SuperVertexId> neighbors, Metadata metadata)
+	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, HashMap<Integer, SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
@@ -347,10 +347,8 @@ public class Database implements Writable {
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-//			if(metadata.name_to_id.get(tableName) == null)
-//				metadata.name_to_id.put(tableName, metadata.name_to_id.size()+1);					
-
 			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
+			
 			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), neighbors);
 			
 			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
