@@ -1,4 +1,5 @@
 package query.filter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -115,14 +116,13 @@ public class GroupByFilter extends Filter {
 		}
 		//Log.DEBUG("***************************************************");
 			//Log.DEBUG(this);
-		System.out.println("Close GroupBy fields = " + types.length);
 		if (nextFilter!=null) nextFilter.close();
 	}
 	public String toString()
 	{
 		StringBuffer s = new StringBuffer("GROUP BY FILTER\n");
 		s.append("  " + outputTableName + "\n");
-		s.append("  GroupByFields" + groupByFields + "\n");
+		s.append("  GroupByFields" + Arrays.toString(groupByFields) + "\n");
 		s.append("  Execution time: ");
 		if (nextFilter!=null)
 			s.append(executionTime-nextFilter.executionTime);

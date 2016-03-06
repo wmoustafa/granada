@@ -69,7 +69,7 @@ public abstract class Filter {
 		if (cursor!=null) next();
 		close();
 //		System.out.println("Evaluate plan:");
-		print();
+//		print();
 		return outputDatabase;
 		
 	}
@@ -79,7 +79,7 @@ public abstract class Filter {
 	public void print()
 	{
 		//System.out.println("***************************************************");
-//		System.out.println(this.toString());
+		System.out.println(this.toString());
 		if (nextFilter!=null) nextFilter.print();
 	}
 

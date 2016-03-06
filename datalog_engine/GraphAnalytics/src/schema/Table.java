@@ -711,7 +711,8 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void readFields(DataInput in) throws IOException {
 
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ))
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
+				(name.equals("wcc_Y-323738959_OUTGOING"))))
 		{
 			
 //			for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
@@ -785,7 +786,8 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void write(DataOutput out) throws IOException {
 		//TODO testing out an idea of sending smaller messages
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ))
+		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
+				(name.equals("wcc_Y-323738959_OUTGOING"))))
 		{
 //			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 //			DataOutputStream w = new DataOutputStream(baos);
