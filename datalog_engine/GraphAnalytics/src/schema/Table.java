@@ -16,6 +16,7 @@ import org.apache.log4j.Logger;
 
 import algebra.RelationalType;
 import giraph.SuperVertexId;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import maputil.Multimap;
 import utils.AggregationFunctionType;
 import utils.PrettyPrinter;
@@ -156,12 +157,13 @@ public class Table implements Writable {
 			{
 				int[] existing = t.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (toBeInserted[i] != (existing[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (toBeInserted[i] != (existing[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
 				{					
 					int existingValueBeforeCombining = (Integer)existing[aggregateArgIndex];
@@ -174,6 +176,11 @@ public class Table implements Writable {
 						if (toBeInserted[aggregateArgIndex] < existing[aggregateArgIndex]) {
 							existing[aggregateArgIndex]= toBeInserted[aggregateArgIndex];
 						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM){
+						existing[aggregateArgIndex] = existing[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat(toBeInserted[aggregateArgIndex]) +  
+						Float.intBitsToFloat(existing[aggregateArgIndex])); 
+
 					}
 					
 					if (existing[aggregateArgIndex] == existingValueBeforeCombining) 
@@ -207,12 +214,13 @@ public class Table implements Writable {
 			{
 				int[] baseValueAsArray = baseValue.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (deltaValueAsArray[i] != (baseValueAsArray[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (deltaValueAsArray[i] != (baseValueAsArray[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
 				{				
 					//FOR UPDATING DELTA
@@ -231,12 +239,16 @@ public class Table implements Writable {
 					if (aggregationFunctionType == AggregationFunctionType.SUM)
 						baseValueAsArray[aggregateArgIndex] = (Integer)deltaValueAsArray[aggregateArgIndex] +
 						(Integer)baseValueAsArray[aggregateArgIndex];
-					else if (aggregationFunctionType == AggregationFunctionType.MIN)
+					else if (aggregationFunctionType == AggregationFunctionType.MIN) {
 						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() < 
 								((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) 
 						{
 							baseValueAsArray[aggregateArgIndex] = deltaValueAsArray[aggregateArgIndex]; 
 						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM)
+						baseValueAsArray[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat((Integer)deltaValueAsArray[aggregateArgIndex]) + 
+						Float.intBitsToFloat((Integer)baseValueAsArray[aggregateArgIndex])); 
 						
 					if ((Integer)baseValueAsArray[aggregateArgIndex] == existingValueBeforeCombining) 
 						return false; 
@@ -262,12 +274,13 @@ public class Table implements Writable {
 			{
 				int[] existing = t.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (toBeInserted[i] == (existing[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)	
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (toBeInserted[i] == (existing[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
 				{
 					if (toBeInserted[aggregateArgIndex] == (existing[aggregateArgIndex])) {
@@ -276,8 +289,14 @@ public class Table implements Writable {
 					}
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
 					// SUM AGGREGATE:
-					toBeInserted[aggregateArgIndex] =  (Integer)toBeInserted[aggregateArgIndex] - 
-							(Integer)existing[aggregateArgIndex];
+					if (aggregationFunctionType == AggregationFunctionType.SUM) {
+						toBeInserted[aggregateArgIndex] =  (Integer)toBeInserted[aggregateArgIndex] - 
+								(Integer)existing[aggregateArgIndex];
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM) {
+						toBeInserted[aggregateArgIndex] =  Float.floatToIntBits(Float.intBitsToFloat((Integer)toBeInserted[aggregateArgIndex]) -  
+						Float.intBitsToFloat((Integer)existing[aggregateArgIndex])); 
+					}
 					// MIN AGGREGATE: do nothing 
 					break;
 				}				
@@ -322,8 +341,8 @@ public class Table implements Writable {
 	public String toString()
 	{
 //		System.out.println("Field types = " + fieldTypes.length);
-		//return String.valueOf(data.size());
-		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
+		return String.valueOf(data.size());
+		/*String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
 		for (Tuple tuple : data.values())
 		{
@@ -335,7 +354,7 @@ public class Table implements Writable {
 				dataAsMatrix[i][j++] = value.toString();
 			i++;
 		}
-		return new PrettyPrinter().toString(dataAsMatrix);
+		return new PrettyPrinter().toString(dataAsMatrix);*/
 	}
 	
 	public boolean combine(Table otherTable)
@@ -428,7 +447,7 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 	
-	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, HashMap<Integer,SuperVertexId> neighbors)
+	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
 		// The line below should change if source node index changes
@@ -479,7 +498,7 @@ public class Table implements Writable {
 			}
 			//if (!existingTable.data.contains(key, value))
 			{
-				if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
+				//if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
 				//existingTable.data.put(key, value);
 				existingTable.addTuple(key, value);
 			}
@@ -711,36 +730,7 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 	@Override
 	public void readFields(DataInput in) throws IOException {
 
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
-				(name.equals("wcc_Y-323738959_OUTGOING"))))
-		{
-			
-//			for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
-//		          System.out.println(ste);
-//		        }
-			
-			isRecursive = in.readBoolean();
-			relationalType = RelationalType.values()[in.readByte()];
-			setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
-			isSourceNodeVariableUnncessary = false;
-			fieldTypes = new Class[3];
-			keyFields = new int[1];
-			data = new Multimap<>();
-			keyFields[0] = 1;
-			size = in.readInt();
-			for (int i = 0; i < size; i++)
-			{
-				int key = in.readInt();
-				int[] array = new int[3];
-				array[0] = 0;
-				array[1] = key;
-				array[2] = in.readInt();
-				Tuple tuple = new Tuple(array);
-				addTuple(key,tuple);
-			}
-		}
-		else
-		{
+
 			int nFieldTypes = in.readInt();
 			isRecursive = in.readBoolean();
 			isSourceNodeVariableUnncessary = in.readBoolean();
@@ -779,36 +769,13 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				Tuple tuple = new Tuple(array);
 				addTuple(tuple);
 			}	
-		}
+		
 	}
 
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		//TODO testing out an idea of sending smaller messages
-		if(name != null && (name.equals("path_Y1727886952_OUTGOING") ||
-				(name.equals("wcc_Y-323738959_OUTGOING"))))
-		{
-//			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//			DataOutputStream w = new DataOutputStream(baos);
 
-			out.writeBoolean(isRecursive);			
-			out.writeByte(relationalType.ordinal());
-			out.writeByte(aggregationFunctionType.ordinal());
-			out.writeInt(data.size());
-			for (Tuple tuple : data.values())
-			{
-				int[] array = tuple.toArray();
-				out.writeInt(array[keyFields[0]]);
-				out.writeInt(array[array.length-1]);
-			}
-//			w.flush();
-////			byte[] result = baos.toByteArray();
-//			out.write(baos.toByteArray());
-		}
-		
-		else
-		{
 //			System.out.println("Write field types length = " + fieldTypes.length);
 			out.writeInt(fieldTypes.length);
 			out.writeBoolean(isRecursive);			
@@ -839,6 +806,5 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 			}			
 			
 			
-		}
 	}
 }

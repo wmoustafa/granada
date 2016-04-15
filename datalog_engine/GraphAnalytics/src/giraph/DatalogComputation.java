@@ -20,6 +20,7 @@ import com.google.gson.Gson;
 
 import algebra.RelationalType;
 import algebra.Rule;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import schema.Database;
 import schema.Metadata;
 
@@ -46,7 +47,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
 			boolean isPagerank = wc.getProgramName().equals("pagerank");
-			HashMap<Integer, SuperVertexId> neighbors = new HashMap<>();
+			Int2ObjectOpenHashMap<SuperVertexId> neighbors = new Int2ObjectOpenHashMap<SuperVertexId>();
 			Metadata metadata = wc.metadata;
 			long start, end;
 			long total_start, total_end;
@@ -65,12 +66,13 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 				messagesDb.combine2(message);				
 			}
 //			System.out.println("Message database after combining=" + messagesDb);
+			assert(!messagesDb.isEmpty());
 //			aggregate("COMBINE_MSG", new LongWritable(end-start));
 			
 			//the following line is important. in case there were no messages, this has to be cleaned manually
 			//, or other wise it will end up with messages from the past.
 			//in case of sum aggregate, those messages will keep increasing the value of the things they join with
-			inputDatabase.removeRelationalDeltaTables(); 
+			//inputDatabase.removeRelationalDeltaTables(); 
 //			aggregate("REMOVE_TABLES", new LongWritable(end-start));
 			
 			Set<String> changedTables = new HashSet<>();
@@ -92,7 +94,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
-					changed = inputDatabase.refresh(outputDatabase);
+					inputDatabase.refresh(outputDatabase);
 //					System.out.println("Refresh input with output: " + inputDatabase);
 //					aggregate("REFRESH_OUTPUT", new LongWritable(end-start));
 				}
@@ -106,6 +108,8 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //					System.out.println("After combine: relational database: " + relationalDatabase);
 				}
 			}
+//			System.out.println("CHANGED:" + changedTables);
+//			System.out.println("RelationalDB:" + relationalDatabase);
 			
 			for (String table : changedTables)
 				aggregate(table, new BooleanWritable(true));

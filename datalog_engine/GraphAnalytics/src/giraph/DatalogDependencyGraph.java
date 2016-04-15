@@ -171,7 +171,7 @@ public class DatalogDependencyGraph {
 				String relationName = entry.getKey();
 				Boolean changed = entry.getValue();
 				Vertex v = relationsToVertices.get(relationName);
-				if (isSingleNodeComponent(v)) closedVertices.add(v);
+				if (!isRecursiveComponent(vertexToComponet.get(v))) closedVertices.add(v);
 				else verticesChanged.put(v, changed);
 			}
 			
@@ -210,14 +210,13 @@ public class DatalogDependencyGraph {
 				}
 				
 				if (allPredecessorsClosed)
-					if (isSingleNodeComponent(v)) toProcess.addAll(relationsToRules.get(v.vertexId));
+					if (!isRecursiveComponent(v)) toProcess.addAll(relationsToRules.get(v.vertexId));
 					else toProcess.addAll(getNonRecursiveRulesInComponent(v));
 						//for (Vertex w : componentToPeripheralVertices.get(v))
 							//toProcess.add(w.vertexId);
 			}
 			
 			relationsChanged.clear();
-			
 			for (Rule r : toProcess)
 			{
 				toProcessBatch.add(r);
@@ -397,6 +396,10 @@ public class DatalogDependencyGraph {
 			//System.out.println("recursive "+r + " " + recursivePredicates);
 			r.setRecursivePredicates(recursivePredicates);
 		}
+	}
+	
+	public boolean isRecursiveComponent(Vertex component) {
+		return !getRecursiveRulesInComponent(component).isEmpty();
 	}
 	
 	public void adjustModularlyStratifiedForRules()

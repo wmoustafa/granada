@@ -84,7 +84,7 @@ public class Operation extends Expression {
 		else if (operationSign == OPERATION_SIGN.PLUS) return l + r;
 		else if (operationSign == OPERATION_SIGN.GREATER_THAN) return l > r?1:0;
 		else if (operationSign == OPERATION_SIGN.NOT_EQUALS) return l != r?1:0;
-		else if (operationSign == OPERATION_SIGN.DIVIDE) return l/r;
+		else if (operationSign == OPERATION_SIGN.DIVIDE) return Float.floatToIntBits(Float.intBitsToFloat(l)/r);  
 		else if (operationSign == OPERATION_SIGN.MINUS) return l - r;
 		else if (operationSign == OPERATION_SIGN.TIMES) return l * r;
 		else if (operationSign == OPERATION_SIGN.OR) throw new RuntimeException("OR: Unsupported operation.");

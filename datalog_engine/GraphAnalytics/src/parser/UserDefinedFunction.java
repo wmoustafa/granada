@@ -107,7 +107,7 @@ public class UserDefinedFunction extends Expression {
 	public boolean isAggregateFunction()
 	{
 		return name.equalsIgnoreCase("COUNT")
-		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX");
+		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("FSUM")  | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX");
 	}
 	
 	public String getName()

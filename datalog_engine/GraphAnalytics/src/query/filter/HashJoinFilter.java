@@ -20,6 +20,7 @@ public class HashJoinFilter extends Filter {
 	
 	public HashJoinFilter(TableAlias rhsTableAlias, Expression[] lhsExpressions, Expression[] rhsExpressions, Expression[] filterConditions, boolean buildRightHashTable)
 	{
+		assert(lhsExpressions.length == 1);
 		this.rhsTableAlias = rhsTableAlias;
 		this.filterConditions = filterConditions;
 		this.lhsExpressions = lhsExpressions;
@@ -70,13 +71,15 @@ public class HashJoinFilter extends Filter {
 	{
 		if (rightBuild != null)
 		{
-			int lhsValues = cursor.evaluate(lhsExpressions).toArray()[0];
+			//int lhsValues = cursor.evaluate(lhsExpressions).toArray()[0];
+			int lhsValues = lhsExpressions[0].evaluate(cursor);
+
 //			System.out.println("left tuples = " + lhsValues);
 			Iterable<Tuple> matchingTuples;
-			if (rhsExpressions.length == 0)
-				matchingTuples = rightBuild.values();
-			else
+			if (rhsExpressions.length != 0)
 				matchingTuples = rightBuild.get(lhsValues);
+			else
+				matchingTuples = rightBuild.values();
 			if (matchingTuples!=null)
 			{
 				for (Tuple currentTuple : matchingTuples)

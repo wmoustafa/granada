@@ -75,45 +75,18 @@ public class GroupByFilter extends Filter {
 
 	@Override
 	public void next() {
-		Tuple group = cursor.evaluate(groupByFields);
-		Integer agg = aggregateValues.get(group);
-		if (agg==null) 
-		{
-			if (aggregationFunctionType == AggregationFunctionType.SUM || aggregationFunctionType == AggregationFunctionType.COUNT) agg=0;
-			if (aggregationFunctionType == AggregationFunctionType.MIN) agg=Integer.MAX_VALUE;
-			if (aggregationFunctionType == AggregationFunctionType.MAX) agg=Integer.MIN_VALUE;
-		}
-		
 		int currentValue = (Integer)aggregateField.evaluate(cursor);
-//		System.out.println("GroupBy currentValue = " + currentValue);
-		if (aggregationFunctionType == AggregationFunctionType.SUM)
-			agg += currentValue;
-		else if (aggregationFunctionType == AggregationFunctionType.COUNT)
-			agg ++;
-		else if (aggregationFunctionType == AggregationFunctionType.MIN)
-			agg = currentValue < agg ? currentValue : agg;
-		else if (aggregationFunctionType == AggregationFunctionType.MAX)
-		{
-			agg = currentValue > agg ? currentValue : agg;
+		int[] outputTuple = new int[groupByFields.length+1];
+		for (int i = 0; i < groupByFields.length; i++) {
+			outputTuple[i]=(Integer)groupByFields[i].evaluate(cursor);
 		}
-		aggregateValues.put(group, agg);
-//		System.out.println("GroupBy aggreagateValues = " + aggregateValues);
-		//derivation.put(group, cursor.toString());
+		outputTuple[groupByFields.length]=currentValue;			
+		outputTable.addTuple(new Tuple(outputTuple));
+//		System.out.println("GroupBy currentValue = " + currentValue);
 	}
 	
 	public void close()
 	{
-//		System.out.println("GroupBy output table name = " + outputTableName + ", keyFields = " + Arrays.toString(keyFields));
-		for (Tuple values : aggregateValues.keySet())
-		{
-//			System.out.println("Tuple = " + values);
-			int[] outputTuple = new int[values.toArray().length+1];
-			int i=0; 
-			for (int o : values.toArray()) outputTuple[i++]=o;
-			outputTuple[i]=aggregateValues.get(values);			
-			outputTable.addTuple(new Tuple(outputTuple));
-			////System.out.println(Arrays.toString(outputTuple) + " is derived from: " + derivation.get(values));
-		}
 		//Log.DEBUG("***************************************************");
 			//Log.DEBUG(this);
 		if (nextFilter!=null) nextFilter.close();

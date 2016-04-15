@@ -38,7 +38,6 @@ public class Cursor {
 	
 	public Tuple evaluate(Expression[] outputFields)
 	{
-		assert(outputFields.length == 1);
 //		return outputFields[0].evaluate(this);
 		int[] values = new int[outputFields.length];
 		int i=0;

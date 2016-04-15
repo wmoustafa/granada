@@ -24,6 +24,8 @@ import evaluation.PossibleOrder;
 import evaluation.PossibleOrderSpace;
 import parser.DatalogVariable;
 import parser.Expression;
+import parser.IntegerConst;
+import parser.Operation;
 import parser.UserDefinedFunction;
 import query.filter.Filter;
 import schema.Database;
@@ -173,6 +175,7 @@ public class Rule {
 	{
 		StringBuffer s = new StringBuffer();
 		s.append(head +":-"+Arrays.toString(literalSubgoals.toArray())+", "+Arrays.toString(conditionSubgoals.toArray()));
+		s.append(" key" + Arrays.toString(head.keyFields));
 		return s.toString();
 	}
 	
@@ -400,7 +403,7 @@ public class Rule {
 		for (int i = topologicalOrder.indexOf(v) + 1; i < topologicalOrder.size(); i++)
 			prohibitedDatalogVariables.add(topologicalOrder.get(i));
 		Rule rewrite = new Rule();
-		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString() + toString().hashCode());
+		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString());// + toString().hashCode());
 		Set<Predicate<Expression>> rewriteLiteralSubgoals = new HashSet<Predicate<Expression>>();
 		Set<Expression> rewriteConditionSubgoals = new HashSet<Expression>();
 		Set<Expression> projectionFields = new LinkedHashSet<Expression>();
@@ -459,7 +462,7 @@ public class Rule {
 		else if (isIncomingRelational)
 			rewrite.relationalType = RelationalType.INCOMING_RELATIONAL;
 		
-		rewrite.localizePrimaryKey();
+		//rewrite.localizePrimaryKey();
 		
 		return rewrite;
 
@@ -489,7 +492,7 @@ public class Rule {
 		for (int i = topologicalOrder.indexOf(v) + 1; i < topologicalOrder.size(); i++)
 			prohibitedDatalogVariables.add(topologicalOrder.get(i));
 		Rule rewrite = new Rule();
-		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString() + toString().hashCode());
+		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString());// + toString().hashCode());
 		Set<Predicate<Expression>> rewriteLiteralSubgoals = new HashSet<Predicate<Expression>>();
 		Set<Expression> rewriteConditionSubgoals = new HashSet<Expression>();
 		Set<Expression> projectionFields = new LinkedHashSet<Expression>();
@@ -833,7 +836,7 @@ public class Rule {
 				}
 
 			DatalogVariable predecessorPrimaryKeyVariable = (DatalogVariable)(predecessorRuleHead.getArgs().get(0));
-			boolean isPredecessorSourceNodeVariableUnncessaryNecessary = false;
+			boolean isPredecessorSourceNodeVariableNcessaryNecessary = true;
 			
 			Set<DatalogVariable> toRemove_predecessor_head = new HashSet<>();
 			Set<DatalogVariable> toRemove_predecessor_subgoal = new HashSet<>();
@@ -848,7 +851,7 @@ public class Rule {
 //				System.out.println(predecessorLiteralSubgoal.getArgs());
 				DatalogVariable v_predecessor_subgaol = (DatalogVariable)predecessorLiteralSubgoal.getArgs().get(predecessorRuleHead.getArgs().indexOf(v_predecessor_head)); 
 				if (v_predecessor_head == predecessorPrimaryKeyVariable)
-					isPredecessorSourceNodeVariableUnncessaryNecessary = rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol);
+					isPredecessorSourceNodeVariableNcessaryNecessary = rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol);
 				else if (!rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol))
 				{
 					toRemove_predecessor_head.add(v_predecessor_head);
@@ -869,11 +872,20 @@ public class Rule {
 			}
 			//predecessorRuleHead.getArgs().removeAll(toRemove_predecessor_head);
 			predecessorLiteralSubgoal.getArgs().removeAll(toRemove_predecessor_subgoal);
-			if (!isPredecessorSourceNodeVariableUnncessaryNecessary)
+			if (!isPredecessorSourceNodeVariableNcessaryNecessary)
 			{
-				predecessorRule.setSourceNodeVariableUnncessary();
-				//predecessorRuleHead.getArgs().remove(predecessorPrimaryKeyVariable);
-				//predecessorLiteralSubgoal.getArgs().remove(predecessorPrimaryKeyVariable);
+				//predecessorRule.setSourceNodeVariableUnncessary();
+				int primaryKeyIndex = predecessorRuleHead.getArgs().indexOf(predecessorPrimaryKeyVariable);
+				int[] predecessorKeyFields = predecessorRuleHead.getKeyFields();
+				for (int i = 0; i < predecessorKeyFields.length; i++)
+				{
+					int keyIndex = predecessorKeyFields[i];
+					if (keyIndex > primaryKeyIndex)
+						predecessorKeyFields[i]--;
+				}
+
+				predecessorRuleHead.getArgs().remove(predecessorPrimaryKeyVariable);
+				predecessorLiteralSubgoal.getArgs().remove(predecessorPrimaryKeyVariable);
 			}
 
 		}		
@@ -966,12 +978,15 @@ public class Rule {
 					predecessorRule.setAggregate();
 					
 					rule.getHead().getArgs().remove(lastArgumentIndex);
-//					rule.getHead().addArg(newAggregateFunction);
+					//rule.getHead().addArg(newAggregateFunction);
 					rule.getHead().addArg(newAggregationVariable);//<------ Vicky change for removing first groupBy
 					rule.isAggregate = false;
 	
 				}
-				predecessorRuleHead.setKeyFields(new int[]{predecessorRuleHead.getArgs().size() - 2});
+				predecessorRuleHead.setKeyFields(new int[]{predecessorRuleHead.getArgs().size() - 2});				//predecessorRuleHead.getArgs().remove(0);
+				/*DatalogVariable X_DUMMY = new DatalogVariable("X_DUMMY");
+				predecessorRuleHead.getArgs().add(0, X_DUMMY);
+				predecessorRule.addConditionSubgoal(new Operation("==", X_DUMMY, new IntegerConst(0)));*/
 
 				
 			}
@@ -1033,10 +1048,42 @@ public class Rule {
 		Random r = new Random();
 		do
 		{
-			randomVariable = new DatalogVariable(String.valueOf((char) (r.nextInt(26) + 'A')) + "_" + this.getHead().getName());
+			StringBuffer s = new StringBuffer();
+			for (int i = 0; i < 5; i++) {
+				String randomStr = String.valueOf((char) (r.nextInt(26) + 'A'));
+				s.append(randomStr);
+			}
+			randomVariable = new DatalogVariable(s.toString());
 		} while (existingVariables.contains(randomVariable));
 		return randomVariable;
 		
+	}
+	
+	public boolean isRenamingRule()
+	{
+		if (getConditionSubgoals().isEmpty()) {
+			if (getLitertalSubgoals().size() == 1) {
+				Predicate<Expression> rhs = getLitertalSubgoals().get(0);
+				List<Expression> rhsArgs = rhs.getArgs();
+				List<Expression> lhsArgs = head.getArgs();
+				if (rhsArgs.size() != lhsArgs.size()) return false;
+				for (int i = 0; i < rhs.getArgs().size(); i++)
+					if (!lhsArgs.get(i).getClass().equals(rhsArgs.get(i).getClass()) || !lhsArgs.get(i).equals(rhsArgs.get(i))) {
+						return false;
+					}
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void substitute(Map<String,String> map)
+	{
+		for (Predicate p : getLitertalSubgoals()) {
+			String substitution = map.get(p.getName());
+			if (substitution != null)
+				p.setName(substitution);
+		}
 	}
 	
 }

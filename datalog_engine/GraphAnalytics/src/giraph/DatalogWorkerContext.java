@@ -90,12 +90,13 @@ public class DatalogWorkerContext extends WorkerContext {
 		}
 		else
 		{
-			////System.out.println("predicatesToProcess " + rulesToProcess);
 			changed = new HashMap<String, Boolean>();
 			for (Rule rule : rulesToProcess)
 				changed.put(rule.getHead().getName(), this.<BooleanWritable>getAggregatedValue(rule.getHead().getName()).get());
-			////System.out.println("changed" + changed);
+
+			//System.out.println("changed" + changed);
 			rulesToProcess = g.getNextToProcess(changed);
+			//System.out.println("predicatesToProcess " + rulesToProcess);
 		}
 		////System.out.println(this.getSuperstep());
 //		System.out.println("-----> Now going to process: " +rulesToProcess);

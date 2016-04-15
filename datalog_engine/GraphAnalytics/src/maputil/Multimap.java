@@ -2,32 +2,38 @@ package maputil;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map.Entry;
+import java.util.LinkedList;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectSet;
+import it.unimi.dsi.fastutil.objects.ObjectSortedSet;
 
 public class Multimap<Integer,Tuple> {
 	
 //	ModifiedJavaHashmap<K,LinkedList<V>> map;
-	ArrayList<Tuple> emptyValue = new ArrayList<>();
+	LinkedList<Tuple> emptyValue = new LinkedList<>();
 	int size = 0;
-	Int2ObjectOpenHashMap<ArrayList<Tuple>> map;
+	Int2ObjectOpenHashMap<LinkedList<Tuple>> map;
 	
 	public Multimap()
 	{
-		map = new Int2ObjectOpenHashMap<ArrayList<Tuple>>();
+		map = new Int2ObjectOpenHashMap<LinkedList<Tuple>>();
 	}
 	
 	public Multimap(int initialSize)
 	{
-		map = new Int2ObjectOpenHashMap<ArrayList<Tuple>>(initialSize); 
+		map = new Int2ObjectOpenHashMap<LinkedList<Tuple>>(); 
 	}
 
 	public void put(int key, Tuple value)
 	{
-		ArrayList<Tuple> existingSet = map.get(key);
+		LinkedList<Tuple> existingSet = map.get(key);
 		if (existingSet == null)
 		{
-			existingSet = new ArrayList<Tuple>();
+			existingSet = new LinkedList<Tuple>();
 			map.put(key, existingSet);
 		}
 		boolean elementAdded = existingSet.add(value);
@@ -36,7 +42,7 @@ public class Multimap<Integer,Tuple> {
 	
 	public void remove(int key, Tuple value)
 	{
-		ArrayList<Tuple> existingSet = map.get(key);
+		LinkedList<Tuple> existingSet = map.get(key);
 		if (existingSet != null)
 		{
 			boolean removed = existingSet.remove(value);
@@ -45,15 +51,15 @@ public class Multimap<Integer,Tuple> {
 		}
 	}
 
-	public ArrayList<Tuple> get(int key)
+	public LinkedList<Tuple> get(int key)
 	{
-		ArrayList<Tuple> value = map.get(key);
+		LinkedList<Tuple> value = map.get(key);
 		if (value != null) return value; else return emptyValue;
 	}
 	
 	public boolean contains(int key, Tuple value)
 	{
-		ArrayList<Tuple> values = map.get(key);
+		LinkedList<Tuple> values = map.get(key);
 		if (values == null) return false;
 		return values.contains(value);
 	}
@@ -62,10 +68,12 @@ public class Multimap<Integer,Tuple> {
 	{
 		return size;
 	}
-	
+	public ObjectSet<Entry<java.lang.Integer, LinkedList<Tuple>>> entries() {
+		return map.entrySet();
+	}
 	public Iterable<Tuple> values()
 	{
-		final Iterator<ArrayList<Tuple>> values= map.values().iterator();
+		final Iterator<LinkedList<Tuple>> values= map.values().iterator();
 		return new Iterable<Tuple>() {
 
 			@Override

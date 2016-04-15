@@ -17,6 +17,7 @@ import org.apache.hadoop.io.Writable;
 
 import algebra.RelationalType;
 import giraph.SuperVertexId;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
@@ -96,24 +97,9 @@ public class Database implements Writable {
 			String tableName = in.readUTF();
 			Table table = null;
 //			System.out.println("Read Table name = " + tableName);
-			if(tableName.equals("y"))
-			{
-				table = new Table(null, null, "path_Y1727886952_OUTGOING");
-				table.readFields(in);
-				tables.put("path_Y1727886952_OUTGOING", table);
-			}
-			else if(tableName.equals("z"))
-			{
-				table = new Table(null, null, "wcc_Y-323738959_OUTGOING");
-				table.readFields(in);
-				tables.put("wcc_Y-323738959_OUTGOING", table);
-			}
-			else
-			{
 				table = new Table(null, null);
 				table.readFields(in);
 				tables.put(tableName, table);
-			}
 		}
 	}
 
@@ -126,11 +112,6 @@ public class Database implements Writable {
 			Table table = entry.getValue();
 			//Vicky TODO: testing for performance optimization
 //			System.out.println("Write Table name = " + tableName);
-			if(tableName.equals("path_Y1727886952_OUTGOING"))
-				out.writeUTF("y");
-			else if(tableName.equals("wcc_Y-323738959_OUTGOING")) 
-				out.writeUTF("z");
-			else
 				out.writeUTF(tableName);
 			table.write(out);
 		}
@@ -338,7 +319,7 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, HashMap<Integer, SuperVertexId> neighbors)
+	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
