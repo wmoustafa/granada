@@ -1084,6 +1084,11 @@ public class Rule {
 			if (substitution != null)
 				p.setName(substitution);
 		}
+		Predicate p = getHead();
+		String substitution = map.get(p.getName());
+		if (substitution != null)
+			p.setName(substitution);
+
 	}
 	
 }

@@ -341,8 +341,8 @@ public class Table implements Writable {
 	public String toString()
 	{
 //		System.out.println("Field types = " + fieldTypes.length);
-		return String.valueOf(data.size());
-		/*String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
+		//return String.valueOf(data.size());
+		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
 		for (Tuple tuple : data.values())
 		{
@@ -354,7 +354,7 @@ public class Table implements Writable {
 				dataAsMatrix[i][j++] = value.toString();
 			i++;
 		}
-		return new PrettyPrinter().toString(dataAsMatrix);*/
+		return new PrettyPrinter().toString(dataAsMatrix);
 	}
 	
 	public boolean combine(Table otherTable)

@@ -31,6 +31,7 @@ public class DatalogDependencyGraph {
 	Multimap<Vertex,Vertex> componentToPeripheralVertices = HashMultimap.create();
 	Map<String,Vertex> relationsToVertices = new HashMap<String,Vertex>();
 	Multimap<String,Rule> relationsToRules = HashMultimap.create();
+	Set<String> nonRecursiveVersionUsed = new HashSet<>();
 	
 	Set<Vertex> closedVertices = new HashSet<Vertex>();
 	int index = 0;
@@ -172,8 +173,12 @@ public class DatalogDependencyGraph {
 				Boolean changed = entry.getValue();
 				Vertex v = relationsToVertices.get(relationName);
 				if (!isRecursiveComponent(vertexToComponet.get(v))) closedVertices.add(v);
-				else verticesChanged.put(v, changed);
+				else {
+					verticesChanged.put(v, changed);
+					//System.out.println("&&&&&&&&&&&&" + v.vertexId + " changed" + changed);
+				}
 			}
+			//System.out.println("&&&&&&&&&Fist" + verticesChanged);
 			
 			for (Vertex n : componentToVertices.keySet())
 			{
@@ -186,20 +191,29 @@ public class DatalogDependencyGraph {
 				if (!componentChanged) closedVertices.add(n);
 				else componentsUnderProcessing.add(n);
 			}
+			//System.out.println("&&&&&&&&&" + g);
+			//System.out.println("&&&&&&&&&" + verticesChanged);
 			
 			List<Rule> toProcess = new ArrayList<Rule>();
 			for (Entry<Vertex, Boolean> entry : verticesChanged.entrySet())
 			{
 				Vertex v = entry.getKey();
 				Boolean vChanged = entry.getValue();
+				//System.out.println("&&&&&&&&&" + g);
 				if (vChanged)
-					for (Vertex w : components.get(v))
-						toProcess.addAll(relationsToRules.get(w.vertexId));
+					for (Vertex w : g.get(v))
+						for (Rule r : relationsToRules.get(w.vertexId)) {
+							//System.out.println("&&&&&&&&Rule " + r + " recursive " + isRecursiveRule(r));
+							//if (!isRecursiveRule(r) && !nonRecursiveVersionUsed.contains(w.vertexId)) {
+								//toProcess.add(r);
+								//nonRecursiveVersionUsed.add(w.vertexId);
+							//}
+							if (isRecursiveRule(r))
+								toProcess.add(r);
+
+						}
 			}
-			
-			for (Vertex v : componentsUnderProcessing)
-				toProcess.removeAll(getNonRecursiveRulesInComponent(v));
-			
+						
 			for (Vertex v : dag.keySet())
 			{
 				if (closedVertices.contains(v) || componentsUnderProcessing.contains(v)) continue;

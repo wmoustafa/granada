@@ -40,8 +40,8 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //		try
 //		{
 		
-//			System.out.println("*****************************************");
-//			System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
+			//System.out.println("*****************************************");
+			//System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
 		
 			DatalogWorkerContext wc = getWorkerContext();
 			boolean useSemiAsync = wc.useSemiAsync();
@@ -56,7 +56,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //			total_start = System.currentTimeMillis();
 			
 			Database inputDatabase = vertex.getValue();
-//			System.out.println("Vertex value = " + vertex.getValue());
+			//System.out.println("Vertex value = " + vertex.getValue());
 			Database relationalDatabase = new Database();
 
 			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
@@ -65,7 +65,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			for (Database message : messages){
 				messagesDb.combine2(message);				
 			}
-//			System.out.println("Message database after combining=" + messagesDb);
+			//System.out.println("Message database after combining=" + messagesDb);
 			assert(!messagesDb.isEmpty());
 //			aggregate("COMBINE_MSG", new LongWritable(end-start));
 			
@@ -84,32 +84,32 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			for (Rule rule : rulesToProcess)
 			{
 //				start = System.currentTimeMillis();
-//				System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
+				//System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
 //				System.out.println("Evaluating " + rule );
 				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
 //				rule.getEvaluationPlan().print();
-//				System.out.println("Output:" + outputDatabase);
+				//System.out.println("Output:" + outputDatabase);
 //				end = System.currentTimeMillis();
 //				aggregate("EVALUATE_RULE", new LongWritable(end-start));
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
 					inputDatabase.refresh(outputDatabase);
-//					System.out.println("Refresh input with output: " + inputDatabase);
+					//System.out.println("Refresh input with output: " + inputDatabase);
 //					aggregate("REFRESH_OUTPUT", new LongWritable(end-start));
 				}
 				else
 				{
 //					System.out.println("Combine relationalDatase with output " );
-//					System.out.println("Before combine: relational database: " + relationalDatabase);
+					//System.out.println("Before combine: relational database: " + relationalDatabase);
 					changed = relationalDatabase.combine2(outputDatabase);
 					changedTables.addAll(changed);
 //					aggregate("COMBINE_OUTPUT", new LongWritable(end-start));
-//					System.out.println("After combine: relational database: " + relationalDatabase);
+					//System.out.println("After combine: relational database: " + relationalDatabase);
 				}
 			}
 //			System.out.println("CHANGED:" + changedTables);
-//			System.out.println("RelationalDB:" + relationalDatabase);
+			//System.out.println("RelationalDB:" + relationalDatabase);
 			
 			for (String table : changedTables)
 				aggregate(table, new BooleanWritable(true));
@@ -139,7 +139,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					SuperVertexId neighborId = entry.getKey();
 					Database neighborDb = entry.getValue();
 					sendMessage(neighborId, neighborDb);
-//					System.out.println("SENT " + neighborDb + "TO NEIGHBOR: " + neighborId);
+					//System.out.println("SENT " + neighborDb + "TO NEIGHBOR: " + neighborId);
 //					aggregate("SEND_RECORDS", new LongWritable(neighborDb.getDataTableByName("path_Y1727886952_OUTGOING").size()));
 //					aggregate("SEND_MSG", new LongWritable(1));
 				}
