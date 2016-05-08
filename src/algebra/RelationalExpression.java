@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -12,13 +11,12 @@ import java.util.Set;
 
 import evaluation.TableAlias;
 import evaluation.TableField;
-import parser.TableFieldVariable;
 import parser.DatalogVariable;
 import parser.Expression;
 import parser.IntegerConst;
 import parser.Operation;
 import parser.StringConst;
-import parser.Term;
+import parser.TableFieldVariable;
 import utils.AggregationFunctionType;
 
 public class RelationalExpression {
@@ -228,13 +226,14 @@ public class RelationalExpression {
 			databaseExpressions.add(databaseFieldExpression);
 		}		
 	}
-	public String toSQL()
+	/*public String toSQL()
 	{
 		StringBuffer sql = new StringBuffer();
+		//sql.append("DROP TABLE "+getOutputDbName()+";");
 		sql.append("CREATE TABLE "+getOutputTableName()+ "(");
 		int i=0;
 		for (Expression outputField : outputFields)
-			sql.append("F"+(i++)+", ");
+			sql.append("F"+(i++)+" "+getSQLType(outputField.getType())+", ");
 		sql.append("PRIMARY KEY (");
 		for (int key : keyFields)
 			sql.append("F"+key+", ");
@@ -285,6 +284,6 @@ public class RelationalExpression {
 		if (c==Integer.class)
 			return "INT";
 		else return "VARCHAR(256)";
-	}
+	}*/
 	
 }

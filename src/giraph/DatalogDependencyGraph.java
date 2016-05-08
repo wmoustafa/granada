@@ -10,13 +10,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+
 import algebra.Predicate;
 import algebra.Program;
 import algebra.RelationalType;
 import algebra.Rule;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
 
 
 public class DatalogDependencyGraph {
@@ -31,6 +31,7 @@ public class DatalogDependencyGraph {
 	Multimap<Vertex,Vertex> componentToPeripheralVertices = HashMultimap.create();
 	Map<String,Vertex> relationsToVertices = new HashMap<String,Vertex>();
 	Multimap<String,Rule> relationsToRules = HashMultimap.create();
+	Set<String> nonRecursiveVersionUsed = new HashSet<>();
 	
 	Set<Vertex> closedVertices = new HashSet<Vertex>();
 	int index = 0;
@@ -60,6 +61,29 @@ public class DatalogDependencyGraph {
 	public static void main(String[] args)
 	{
 		DatalogDependencyGraph g = new DatalogDependencyGraph();
+		/*Vertex n1 = g.new Vertex("1");
+		Vertex n2 = g.new Vertex("2");
+		Vertex n3 = g.new Vertex("3");
+		Vertex n4 = g.new Vertex("4");
+		Vertex n5 = g.new Vertex("5");
+		Vertex n6 = g.new Vertex("6");
+		Vertex n7 = g.new Vertex("7");
+		g.relationsToVertices.put("1", n1);
+		g.relationsToVertices.put("2", n2);
+		g.relationsToVertices.put("3", n3);
+		g.relationsToVertices.put("4", n4);
+		g.relationsToVertices.put("5", n5);
+		g.relationsToVertices.put("6", n6);
+		g.relationsToVertices.put("7", n7);
+		g.g.put(n1, n2);
+		g.g.put(n1, n3);
+		g.g.put(n2, n4);
+		g.g.put(n4, n2);
+		g.g.put(n3, n5);
+		g.g.put(n5, n3);
+		g.g.put(n4, n6);
+		g.g.put(n5, n6);
+		g.g.put(n5, n7);*/
 		
 		Vertex n1 = g.new Vertex("e");
 		Vertex n2 = g.new Vertex("v");
@@ -86,6 +110,7 @@ public class DatalogDependencyGraph {
 		g.g.put(n7, n4);
 		
 		List<Rule> toProcess = g.getFirstToProcess();
+		//System.out.println(toProcess);
 		for (int i = 0; i< 10; i++)
 		{
 			Map<String,Boolean> changed = new HashMap<String,Boolean>();
@@ -93,6 +118,7 @@ public class DatalogDependencyGraph {
 				if (g.isSingleNodeComponent(g.relationsToVertices.get(v))) changed.put(v.getHead().getName(), true);
 				else changed.put(v.getHead().getName(), Math.random() < 0.8);
 			toProcess = g.getNextToProcess(changed);
+			//System.out.println(toProcess);
 		}
 	}
 	
@@ -146,9 +172,13 @@ public class DatalogDependencyGraph {
 				String relationName = entry.getKey();
 				Boolean changed = entry.getValue();
 				Vertex v = relationsToVertices.get(relationName);
-				if (isSingleNodeComponent(v)) closedVertices.add(v);
-				else verticesChanged.put(v, changed);
+				if (!isRecursiveComponent(vertexToComponet.get(v))) closedVertices.add(v);
+				else {
+					verticesChanged.put(v, changed);
+					//System.out.println("&&&&&&&&&&&&" + v.vertexId + " changed" + changed);
+				}
 			}
+			//System.out.println("&&&&&&&&&Fist" + verticesChanged);
 			
 			for (Vertex n : componentToVertices.keySet())
 			{
@@ -161,20 +191,29 @@ public class DatalogDependencyGraph {
 				if (!componentChanged) closedVertices.add(n);
 				else componentsUnderProcessing.add(n);
 			}
+			//System.out.println("&&&&&&&&&" + g);
+			//System.out.println("&&&&&&&&&" + verticesChanged);
 			
 			List<Rule> toProcess = new ArrayList<Rule>();
 			for (Entry<Vertex, Boolean> entry : verticesChanged.entrySet())
 			{
 				Vertex v = entry.getKey();
 				Boolean vChanged = entry.getValue();
+				//System.out.println("&&&&&&&&&" + g);
 				if (vChanged)
-					for (Vertex w : components.get(v))
-						toProcess.addAll(relationsToRules.get(w.vertexId));
+					for (Vertex w : g.get(v))
+						for (Rule r : relationsToRules.get(w.vertexId)) {
+							//System.out.println("&&&&&&&&Rule " + r + " recursive " + isRecursiveRule(r));
+							//if (!isRecursiveRule(r) && !nonRecursiveVersionUsed.contains(w.vertexId)) {
+								//toProcess.add(r);
+								//nonRecursiveVersionUsed.add(w.vertexId);
+							//}
+							if (isRecursiveRule(r))
+								toProcess.add(r);
+
+						}
 			}
-			
-			for (Vertex v : componentsUnderProcessing)
-				toProcess.removeAll(getNonRecursiveRulesInComponent(v));
-			
+						
 			for (Vertex v : dag.keySet())
 			{
 				if (closedVertices.contains(v) || componentsUnderProcessing.contains(v)) continue;
@@ -185,12 +224,13 @@ public class DatalogDependencyGraph {
 				}
 				
 				if (allPredecessorsClosed)
-					if (isSingleNodeComponent(v)) toProcess.addAll(relationsToRules.get(v.vertexId));
+					if (!isRecursiveComponent(v)) toProcess.addAll(relationsToRules.get(v.vertexId));
 					else toProcess.addAll(getNonRecursiveRulesInComponent(v));
+						//for (Vertex w : componentToPeripheralVertices.get(v))
+							//toProcess.add(w.vertexId);
 			}
 			
 			relationsChanged.clear();
-			
 			for (Rule r : toProcess)
 			{
 				toProcessBatch.add(r);
@@ -367,8 +407,13 @@ public class DatalogDependencyGraph {
 		for (Rule r : p.getRules())
 		{
 			Set<Predicate> recursivePredicates = getRecursivePredicates(r);
+			//System.out.println("recursive "+r + " " + recursivePredicates);
 			r.setRecursivePredicates(recursivePredicates);
 		}
+	}
+	
+	public boolean isRecursiveComponent(Vertex component) {
+		return !getRecursiveRulesInComponent(component).isEmpty();
 	}
 	
 	public void adjustModularlyStratifiedForRules()

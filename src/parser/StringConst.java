@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class StringConst extends Term {
 
@@ -50,9 +50,10 @@ public class StringConst extends Term {
 		return true;
 	}
 
-	public Object evaluate(Cursor m)
+	public int evaluate(Cursor m)
 	{
-		return value;
+		throw new RuntimeException("Unsupported operation");
+		//return value;
 	}
 	public Expression substitute(Map<? extends Expression, ? extends Expression> m)
 	{

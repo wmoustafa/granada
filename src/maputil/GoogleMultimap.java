@@ -1,18 +1,9 @@
 package maputil;
 
-import java.util.AbstractMap;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.TreeMultimap;
 
 public class GoogleMultimap<K extends Comparable,V extends Comparable> {
 	

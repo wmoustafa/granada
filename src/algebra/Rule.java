@@ -15,9 +15,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import org.apache.commons.collections.MultiMap;
-import org.python.antlr.runtime.RuleReturnScope;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
@@ -33,7 +30,6 @@ import parser.UserDefinedFunction;
 import query.filter.Filter;
 import schema.Database;
 import schema.Metadata;
-import utils.Log;
 
 public class Rule {
 	
@@ -44,6 +40,8 @@ public class Rule {
 	List<Expression> conditionSubgoals;
 	Set<Predicate> recursivePredicates;
 	Multimap<DatalogVariable,DatalogVariable> ruleGraph;
+	Map<String,DatalogVariable> weightVariableNames;
+	Map<DatalogVariable,DatalogVariable> substitutionMap;
 	Multimap<DatalogVariable,DatalogVariable> dag;
 	private boolean isAggregate;
 	private RelationalType relationalType = RelationalType.NOT_RELATIONAL;
@@ -177,23 +175,28 @@ public class Rule {
 	{
 		StringBuffer s = new StringBuffer();
 		s.append(head +":-"+Arrays.toString(literalSubgoals.toArray())+", "+Arrays.toString(conditionSubgoals.toArray()));
+		s.append(" key" + Arrays.toString(head.keyFields));
 		return s.toString();
 	}
 	
 	private void generateRuleGraph()
 	{
 		ruleGraph = HashMultimap.create();
+		weightVariableNames = new HashMap<>();
+		substitutionMap = new HashMap<>();
 		for (Predicate<Expression> p : literalSubgoals)
 			if (p.getName().equalsIgnoreCase("edges"))
 			{
 				List<Expression> edgeArgs = p.getArgs();
 				Expression startVertexExpression = edgeArgs.get(0);
 				Expression endVertexExpression = edgeArgs.get(1);
+				Expression weightVarExpression = edgeArgs.get(2);
 				if (startVertexExpression instanceof DatalogVariable && endVertexExpression instanceof DatalogVariable)
 				{
 					DatalogVariable startVertex = (DatalogVariable)startVertexExpression;
 					DatalogVariable endVertex = (DatalogVariable)endVertexExpression;
 					ruleGraph.put(startVertex, endVertex);
+					weightVariableNames.put(startVertex + "->" + endVertex, (DatalogVariable)weightVarExpression);
 				}
 			}
 	}
@@ -386,6 +389,9 @@ public class Rule {
 			DatalogVariable w = topologicalOrder.get(i);
 			if (dag.containsEntry(w, v)) { predecessor = w; break; }
 		}*/
+		System.out.println(this);
+		System.out.println(v);
+
 		Set<DatalogVariable> predecessors = new HashSet<DatalogVariable>();
 		Set<DatalogVariable> successors = new HashSet<DatalogVariable>();
 		for (Entry<DatalogVariable,DatalogVariable> entry : dag.entries())
@@ -419,6 +425,8 @@ public class Rule {
 		
 		for (DatalogVariable predecessor : predecessors)
 		{
+			System.out.println(previousRules);
+			System.out.println(predecessor);
 			Predicate predecessorRuleHead = previousRules.get(predecessor).getHead();
 			rewriteLiteralSubgoals.add(new Predicate(predecessorRuleHead));
 			projectionFields.addAll(predecessorRuleHead.getIncludedDatalogVaraibles());
@@ -459,8 +467,8 @@ public class Rule {
 		else if (isIncomingRelational)
 			rewrite.relationalType = RelationalType.INCOMING_RELATIONAL;
 		
-		rewrite.localizePrimaryKey();
-		
+		if (rewrite.getLitertalSubgoals().size()==0) rewrite.localizePrimaryKey();
+		System.out.println(rewrite);
 		return rewrite;
 
 	}
@@ -509,6 +517,8 @@ public class Rule {
 		for (Rule predecessorRule : rewriteRuleDependency.get(v))
 		{
 			Predicate predecessorRuleHead = predecessorRule.getHead();
+//			System.out.println("PredecessorRuleHead:" + predecessorRuleHead);
+//			System.out.println("v:" + v);
 			Predicate newPredicate = new Predicate(predecessorRuleHead);
 			newPredicate.removeLastArg();
 			newPredicate.addArg(v);
@@ -527,7 +537,10 @@ public class Rule {
 			
 		}
 		for (Expression e : projectionFields) rewriteHead.addArg(e);
-		
+//		System.out.println(rewriteHead);
+		rewriteHead = rewriteHead.substitute(substitutionMap);
+//		System.out.println(rewriteHead);
+//		System.out.println("SUBStiutionmap: " + substitutionMap);
 		rewrite.setHead(rewriteHead);
 		for (Predicate p : rewriteLiteralSubgoals) rewrite.addLiteralSubgoal(p);
 		for (Expression e : rewriteConditionSubgoals) rewrite.addConditionSubgoal(e);
@@ -558,12 +571,14 @@ public class Rule {
 			outgoingRewrite.getHead().rename(rewrite.getHead().getName() + "_OUTGOING");
 			outgoingRewrite.relationalType = RelationalType.OUTGOING_RELATIONAL;
 			Predicate<Expression> edgesPredicate = new Predicate<>("outgoingNeighbors");
+			outgoingRewrite.addLiteralSubgoal(edgesPredicate);
 			edgesPredicate.addArg(v);
 			DatalogVariable randomVariable1 = outgoingRewrite.generateRandomVariableName();
 			edgesPredicate.addArg(randomVariable1);
 			DatalogVariable randomVariable2 = outgoingRewrite.generateRandomVariableName();
 			edgesPredicate.addArg(randomVariable2);
-			outgoingRewrite.addLiteralSubgoal(edgesPredicate);
+			//There is a hard assumption that the cost variable is the second to last variable
+			//The following must always be the second to last line.
 			outgoingRewrite.getHead().addArg(randomVariable2);
 			//There is a hard assumption that the destination node id is the last in the predicate
 			//The following must always be the last line.
@@ -571,8 +586,10 @@ public class Rule {
 			outgoingRewrite.getHead().keyFields = new int[]{ outgoingRewrite.getHead().getArgs().size() - 1 };
 			
 			rewrites.add(outgoingRewrite);
-			for (DatalogVariable successor : outgoingVariables)
+			for (DatalogVariable successor : outgoingVariables) {
 				rewriteRuleDependency.put(successor, outgoingRewrite);
+				substitutionMap.put(weightVariableNames.get(v + "->" + successor), randomVariable2);
+			}
 		}
 		
 		if (isIncomingRelational)
@@ -581,12 +598,14 @@ public class Rule {
 			incomingRewrite.getHead().rename(rewrite.getHead().getName() + "_INCOMING");
 			incomingRewrite.relationalType = RelationalType.INCOMING_RELATIONAL;
 			Predicate<Expression> edgesPredicate = new Predicate<>("incomingNeighbors");
+			incomingRewrite.addLiteralSubgoal(edgesPredicate);
 			edgesPredicate.addArg(v);
 			DatalogVariable randomVariable1 = incomingRewrite.generateRandomVariableName();
 			edgesPredicate.addArg(randomVariable1);
 			DatalogVariable randomVariable2 = incomingRewrite.generateRandomVariableName();
 			edgesPredicate.addArg(randomVariable2);
-			incomingRewrite.addLiteralSubgoal(edgesPredicate);
+			//There is a hard assumption that the cost variable is the second to last variable
+			//The following must always be the second to last line.
 			incomingRewrite.getHead().addArg(randomVariable2);
 			//There is a hard assumption that the destination node id is the last in the predicate
 			//The following must always be the last line.
@@ -594,8 +613,10 @@ public class Rule {
 			incomingRewrite.getHead().keyFields = new int[]{ incomingRewrite.getHead().getArgs().size() - 1 };
 
 			rewrites.add(incomingRewrite);
-			for (DatalogVariable successor : incomingVariables)
+			for (DatalogVariable successor : incomingVariables) {
 				rewriteRuleDependency.put(successor, incomingRewrite);
+				substitutionMap.put(weightVariableNames.get(successor + "->" + v), randomVariable2);
+			}
 		}
 		
 		if (!isIncomingRelational && ! isOutgoingRelational)
@@ -669,7 +690,11 @@ public class Rule {
 			finalRule.setHead(new Predicate(getHead()));		
 			rewrites.add(finalRule);*/
 			Rule sinkRule = rewrites.get(rewrites.size() - 1);
-			sinkRule.setHead(new Predicate(getHead()));
+//			System.out.println("^^^" + getHead());
+//			System.out.println("^^^" + getHead().substitute(substitutionMap));
+			sinkRule.setHead(getHead().substitute(substitutionMap));
+			//sinkRule.setHead(new Predicate(getHead()));
+//			System.out.println(sinkRule.getHead());
 			sinkRule.relationalType = RelationalType.NOT_RELATIONAL;
 			if (useEagerAggregation) applyEagerAggregationEdgeBased(rewrites, rewriteRuleDependency);
 			removeUnncessaryVariables(rewrites, rewriteRuleDependency, true);
@@ -803,6 +828,9 @@ public class Rule {
 			if (edgeBased) predecessorRule = rewriteRuleDependency.get(primaryKeyVariable).iterator().next();
 			else predecessorRule = rewriteRuleDependency.get(predecessor).iterator().next();
 
+//			System.out.println("******************");
+//			System.out.println(rule);
+//			System.out.println(predecessorRule);
 			Predicate predecessorRuleHead = predecessorRule.getHead();
 			Predicate predecessorLiteralSubgoal = null;
 			for (Predicate literalSubgoal : rule.getLitertalSubgoals())
@@ -813,7 +841,7 @@ public class Rule {
 				}
 
 			DatalogVariable predecessorPrimaryKeyVariable = (DatalogVariable)(predecessorRuleHead.getArgs().get(0));
-			boolean isPredecessorSourceNodeVariableUnncessaryNecessary = false;
+			boolean isPredecessorSourceNodeVariableNcessaryNecessary = true;
 			
 			Set<DatalogVariable> toRemove_predecessor_head = new HashSet<>();
 			Set<DatalogVariable> toRemove_predecessor_subgoal = new HashSet<>();
@@ -821,9 +849,14 @@ public class Rule {
 			{
 				DatalogVariable v_predecessor_head;
 				if (e instanceof DatalogVariable) v_predecessor_head = (DatalogVariable)e; else continue;
+//				System.out.println("******************");
+//				System.out.println(predecessorRuleHead);
+//				System.out.println(predecessorRuleHead.getArgs());
+//				System.out.println(predecessorLiteralSubgoal);
+//				System.out.println(predecessorLiteralSubgoal.getArgs());
 				DatalogVariable v_predecessor_subgaol = (DatalogVariable)predecessorLiteralSubgoal.getArgs().get(predecessorRuleHead.getArgs().indexOf(v_predecessor_head)); 
 				if (v_predecessor_head == predecessorPrimaryKeyVariable)
-					isPredecessorSourceNodeVariableUnncessaryNecessary = rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol);
+					isPredecessorSourceNodeVariableNcessaryNecessary = rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol);
 				else if (!rule.checkIfVariableNecessary(predecessorLiteralSubgoal, v_predecessor_subgaol))
 				{
 					toRemove_predecessor_head.add(v_predecessor_head);
@@ -844,11 +877,20 @@ public class Rule {
 			}
 			//predecessorRuleHead.getArgs().removeAll(toRemove_predecessor_head);
 			predecessorLiteralSubgoal.getArgs().removeAll(toRemove_predecessor_subgoal);
-			if (!isPredecessorSourceNodeVariableUnncessaryNecessary)
+			if (!isPredecessorSourceNodeVariableNcessaryNecessary)
 			{
-				predecessorRule.setSourceNodeVariableUnncessary();
-				//predecessorRuleHead.getArgs().remove(predecessorPrimaryKeyVariable);
-				//predecessorLiteralSubgoal.getArgs().remove(predecessorPrimaryKeyVariable);
+				//predecessorRule.setSourceNodeVariableUnncessary();
+				int primaryKeyIndex = predecessorRuleHead.getArgs().indexOf(predecessorPrimaryKeyVariable);
+				int[] predecessorKeyFields = predecessorRuleHead.getKeyFields();
+				for (int i = 0; i < predecessorKeyFields.length; i++)
+				{
+					int keyIndex = predecessorKeyFields[i];
+					if (keyIndex > primaryKeyIndex)
+						predecessorKeyFields[i]--;
+				}
+
+				predecessorRuleHead.getArgs().remove(predecessorPrimaryKeyVariable);
+				predecessorLiteralSubgoal.getArgs().remove(predecessorPrimaryKeyVariable);
 			}
 
 		}		
@@ -885,7 +927,9 @@ public class Rule {
 
 				Rule predecessorRule = rewriteRuleDependency.get(primaryKeyVariable).iterator().next();
 				
+//				System.out.println("HERE4");
 				if (!predecessorRule.canProduceVariables(variablesInAggregateArgument)) continue;
+//				System.out.println("HERE3");
 				
 				boolean primaryKeyIsSameAsAggregationColumn = variablesInAggregateArgument.size() == 1 && variablesInAggregateArgument.contains(predecessor);
 				boolean primaryKeyIsDisjointFromAggregationColumn = !variablesInAggregateArgument.contains(predecessor);
@@ -901,6 +945,7 @@ public class Rule {
 				
 				if (primaryKeyIsSameAsAggregationColumn)
 				{
+//					System.out.println("HERE1");
 					predecessorRuleHead.addArg(aggregateArgument);
 					
 					predecessorLiteralSubgoal.addArg(newAggregationVariable);
@@ -914,11 +959,14 @@ public class Rule {
 					UserDefinedFunction newAggregateFunction = new UserDefinedFunction(newAggregateFunctionName, newAggregateFunctionArgs);
 					predecessorRule.setAggregate();
 					rule.getHead().getArgs().remove(lastArgumentIndex);
-					rule.getHead().addArg(newAggregateFunction);
+					//rule.getHead().addArg(newAggregateFunction);
+					rule.getHead().addArg(newAggregationVariable); //<------ Vicky change for removing first groupBy
+					rule.isAggregate = false;
 					
 				}
 				if (primaryKeyIsDisjointFromAggregationColumn)
 				{
+//					System.out.println("HERE2");
 					predecessorRuleHead.getArgs().removeAll(variablesInAggregateArgument);
 					predecessorRuleHead.addArg(aggregateArgument);
 
@@ -935,10 +983,15 @@ public class Rule {
 					predecessorRule.setAggregate();
 					
 					rule.getHead().getArgs().remove(lastArgumentIndex);
-					rule.getHead().addArg(newAggregateFunction);
+					//rule.getHead().addArg(newAggregateFunction);
+					rule.getHead().addArg(newAggregationVariable);//<------ Vicky change for removing first groupBy
+					rule.isAggregate = false;
 	
 				}
-				predecessorRuleHead.setKeyFields(new int[]{predecessorRuleHead.getArgs().size() - 2});
+				predecessorRuleHead.setKeyFields(new int[]{predecessorRuleHead.getArgs().size() - 2});				//predecessorRuleHead.getArgs().remove(0);
+				/*DatalogVariable X_DUMMY = new DatalogVariable("X_DUMMY");
+				predecessorRuleHead.getArgs().add(0, X_DUMMY);
+				predecessorRule.addConditionSubgoal(new Operation("==", X_DUMMY, new IntegerConst(0)));*/
 
 				
 			}
@@ -979,6 +1032,7 @@ public class Rule {
 			for (Predicate p : getLitertalSubgoals())
 				if (p.getIncludedDatalogVaraibles().contains(v)) { found = true; break; }
 			if (!found) return false;
+			System.out.println("FOUND: " + v);
 		}
 		return true;
 	}
@@ -993,15 +1047,54 @@ public class Rule {
 			for (Expression e : litearalSubgoal.getArgs())
 				existingVariables.addAll(e.getIncludedDatalogVariables());
 		
+		System.out.println("existingVariables "+existingVariables);
 		
 		DatalogVariable randomVariable = null;
 		Random r = new Random();
 		do
 		{
-			randomVariable = new DatalogVariable(String.valueOf((char) (r.nextInt(26) + 'A')));
+			StringBuffer s = new StringBuffer();
+			for (int i = 0; i < 5; i++) {
+				String randomStr = String.valueOf((char) (r.nextInt(26) + 'A'));
+				s.append(randomStr);
+			}
+			randomVariable = new DatalogVariable(s.toString());
 		} while (existingVariables.contains(randomVariable));
 		return randomVariable;
 		
+	}
+	
+	public boolean isRenamingRule()
+	{
+		if (relationalType != RelationalType.NOT_RELATIONAL) return false;
+		if (getConditionSubgoals().isEmpty()) {
+			if (getLitertalSubgoals().size() == 1) {
+				Predicate<Expression> rhs = getLitertalSubgoals().get(0);
+				List<Expression> rhsArgs = rhs.getArgs();
+				List<Expression> lhsArgs = head.getArgs();
+				if (rhsArgs.size() != lhsArgs.size()) return false;
+				for (int i = 0; i < rhs.getArgs().size(); i++)
+					if (!lhsArgs.get(i).getClass().equals(rhsArgs.get(i).getClass()) || !lhsArgs.get(i).equals(rhsArgs.get(i))) {
+						return false;
+					}
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void substitute(Map<String,String> map)
+	{
+		for (Predicate p : getLitertalSubgoals()) {
+			String substitution = map.get(p.getName());
+			if (substitution != null)
+				p.setName(substitution);
+		}
+		Predicate p = getHead();
+		String substitution = map.get(p.getName());
+		if (substitution != null)
+			p.setName(substitution);
+
 	}
 	
 }

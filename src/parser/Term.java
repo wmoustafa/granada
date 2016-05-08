@@ -9,7 +9,7 @@ public abstract class Term  extends Expression {
 		super(null,null);
 	}
 	
-	public abstract Object evaluate(Cursor m);
+	public abstract int evaluate(Cursor m);
 	public abstract String toString();
 
 	

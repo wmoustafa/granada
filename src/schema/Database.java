@@ -1,13 +1,8 @@
 package schema;
 
-import giraph.SuperVertexId;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -15,22 +10,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 import algebra.RelationalType;
-
-import com.sun.corba.se.impl.ior.WireObjectKeyTemplate;
-
+import giraph.SuperVertexId;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
 
@@ -38,12 +28,24 @@ public class Database implements Writable {
 	
 	private Map<String, Table> tables = new HashMap<String, Table>();
 	private int size = 0;
+	private Metadata metadata;
+	private int superstep = 0;
 	
 	public Database()
 	{
 		tables = new HashMap<String, Table>();
 		size = 0;
 	}
+	
+	public Database(Metadata m, int superstep)
+	{
+		tables = new HashMap<String, Table>();
+		size = 0;
+		this.metadata = m;
+		this.superstep = superstep;
+	}
+	
+	
 	public Table getDataTableByName(String name)
 	{
 		return tables.get(name);
@@ -86,17 +88,32 @@ public class Database implements Writable {
 	}
 
 	public void readFields(DataInput in) throws IOException {
-		//byte[] uncompressedByteArray = WritableUtils.readCompressedByteArray(in);
-		//UnsafeByteArrayInputStream inStream = new UnsafeByteArrayInputStream(uncompressedByteArray);
 
 		size = in.readInt();
 		tables = new HashMap<String, Table>();
 		for (int i = 0; i < size; i++)
 		{
+			//TODO Vicky test for performance send an integer id as table name instead of large string
 			String tableName = in.readUTF();
-			Table table = new Table(null, null);
-			table.readFields(in);
-			tables.put(tableName, table);
+			Table table = null;
+//			System.out.println("Read Table name = " + tableName);
+				table = new Table(null, null);
+				table.readFields(in);
+				tables.put(tableName, table);
+		}
+	}
+
+
+	public void write(DataOutput out) throws IOException {
+		out.writeInt(tables.entrySet().size());
+		for (Map.Entry<String, Table> entry : tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table table = entry.getValue();
+			//Vicky TODO: testing for performance optimization
+//			System.out.println("Write Table name = " + tableName);
+				out.writeUTF(tableName);
+			table.write(out);
 		}
 	}
 
@@ -120,17 +137,6 @@ public class Database implements Writable {
 			Table table = new Table(null, null);
 			table.readFields(inStream);
 			tables.put(tableName, table);
-		}
-	}
-
-	public void write(DataOutput out) throws IOException {
-		out.writeInt(tables.entrySet().size());
-		for (Map.Entry<String, Table> entry : tables.entrySet())
-		{
-			String tableName = entry.getKey();
-			Table table = entry.getValue();
-			out.writeUTF(tableName);
-			table.write(out);
 		}
 	}
 	
@@ -205,6 +211,36 @@ public class Database implements Writable {
 		return changedTables;
 	}
 
+	public void substract(Database otherDatabase)
+	{
+		for (Entry<String, Table> entry : tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table thisTable = entry.getValue();
+			Table otherTable = otherDatabase.tables.get(tableName + "_full");
+			if (otherTable != null) 
+			{
+				thisTable.subtract(otherTable);
+			}
+			//else tables.put(tableName, thisTable);
+		}
+	}
+
+	public void substract1(Database delta)
+	{
+		for (Entry<String, Table> entry : delta.tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table thisTable = entry.getValue();
+			Table fullTable = tables.get(tableName + "_full");
+			if (fullTable != null) 
+			{
+				thisTable.subtract(fullTable);
+			}
+			//else tables.put(tableName, thisTable);
+		}
+	}
+
 	public Set<String> refresh(Database delta)
 	{
 		Set<String> changedTables = new HashSet<String>();
@@ -216,14 +252,17 @@ public class Database implements Writable {
 			Table fullTable = tables.get(deltaTableName + "_full");
 			if (fullTable != null) 
 			{
-				boolean tableChanged = fullTable.refresh(deltaTable);
+//				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
+				boolean tableChanged = fullTable.combineAndSubtract(deltaTable);
 				if (tableChanged) changedTables.add(deltaTableName);
 			}
 			else
 			{
+//				System.out.println("Add full table " + deltaTableName + "_full");
 				tables.put(deltaTableName + "_full", deltaTable);
 				if (!deltaTable.isEmpty()) changedTables.add(deltaTableName);
 			}
+//			System.out.println("Add table " + deltaTableName);
 			tables.put(deltaTableName, deltaTable);
 		}
 		return changedTables;
@@ -236,7 +275,9 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
-			if (!(table.getRelationalType() == RelationalType.NOT_RELATIONAL)) relationalDatabase.addDataTable(tableName, table);
+//			System.out.println("Relational database table = " + tableName);
+			if (!(table.getRelationalType() == RelationalType.NOT_RELATIONAL)) 
+				relationalDatabase.addDataTable(tableName, table);
 		}
 		return relationalDatabase;
 	}
@@ -278,7 +319,7 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexUseSemiJoin(Database inputDatabase)
+	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
@@ -287,10 +328,9 @@ public class Database implements Writable {
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			
-
 			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
-			partitionedTable = table.partitionUseSemiJoin(inputDatabase.tables.get("neighborSuperVertices"));
+			
+			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), neighbors);
 			
 			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
 			{
@@ -302,13 +342,16 @@ public class Database implements Writable {
 					existingDatabase = new Database();
 					partitionedDatabase.put(superVertexId, existingDatabase);
 				}
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: tableName = " + tableName);
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: table = " + tablePartition);
+				tablePartition.setName(tableName);
 				existingDatabase.addDataTable(tableName, tablePartition);
 			}
 		}
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexUseSemiJoinSemiAsync(Database inputDatabase, boolean isPagerank)
+	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexWithMessagesEdgeBased(Database inputDatabase, boolean isPagerank)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
@@ -320,10 +363,10 @@ public class Database implements Writable {
 			Map<SuperVertexId,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
 			Map<SuperVertexId,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
 			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				outgoingPartitionedTable = table.partitionUseSemiJoinSemiAsync(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
+				outgoingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
 			
 			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				incomingPartitionedTable = table.partitionUseSemiJoinSemiAsync(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
+				incomingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
 
 			Map<SuperVertexId,PartitionWithMessages> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);
@@ -347,7 +390,7 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexUseSemiAsync(Database inputDatabase, boolean isPagerank)
+	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexWithMessages(Database inputDatabase, boolean isPagerank)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
@@ -358,11 +401,17 @@ public class Database implements Writable {
 			
 			Map<SuperVertexId,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
 			Map<SuperVertexId,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
-			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				outgoingPartitionedTable = table.partitionUseSemiAsync(inputDatabase.tables.get("outgoingNeighbors"), inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
+			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || 
+					table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
+				outgoingPartitionedTable = table.partitionWithMessages(inputDatabase.tables.get("outgoingNeighbors"), 
+						inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), 
+						inputDatabase.tables.get("incomingNeighbors"), isPagerank);
 			
-			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				incomingPartitionedTable = table.partitionUseSemiAsync(inputDatabase.tables.get("incomingNeighbors"), inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
+			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || 
+					table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
+				incomingPartitionedTable = table.partitionWithMessages(inputDatabase.tables.get("incomingNeighbors"),
+						inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"),
+						inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
 
 			Map<SuperVertexId,PartitionWithMessages> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);

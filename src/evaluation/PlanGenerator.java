@@ -1,26 +1,23 @@
 package evaluation;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import algebra.RelationalExpression;
 import algebra.RelationalType;
-import parser.TableFieldVariable;
 import parser.Expression;
+import parser.TableFieldVariable;
 import parser.UserDefinedFunction;
 import query.filter.Filter;
 import query.filter.GroupByFilter;
 import query.filter.HashJoinFilter;
 import query.filter.ProjectFilter;
 import query.filter.ScanFilter;
-import schema.Database;
 import schema.Metadata;
 import utils.AggregationFunctionType;
 
@@ -90,7 +87,7 @@ public class PlanGenerator {
 				}
 				else
 				{
-					HashJoinFilter hashJoin = createHashJoinFilter(metadata, tableAlias);
+					HashJoinFilter hashJoin = createHashJoinFilter(metadata,tableAlias);
 					previousFilter.setNextFilter(hashJoin);
 					previousFilter = hashJoin;
 				}
@@ -117,7 +114,7 @@ public class PlanGenerator {
 	
 
 
-	private HashJoinFilter createHashJoinFilter(Metadata metadata, TableAlias rhsTableAlias)
+	private HashJoinFilter createHashJoinFilter(Metadata metadata,TableAlias rhsTableAlias)
 	{
 		int[] rhsTableKeyFields = metadata.getKeyFields(rhsTableAlias.tableName);
 		List<Integer> rhsTableKeyFieldsList = new ArrayList<Integer>();
@@ -130,12 +127,17 @@ public class PlanGenerator {
 		List<Expression> lhs = new ArrayList<Expression>();
 		List<Expression> rhs = new ArrayList<Expression>();
 		List<Integer> rhsFieldNumbers = new ArrayList<Integer>();
+		////System.out.println("******************************");
+		////System.out.println("allConditions1: "+allConditions);
 		for (Expression e : allConditions)
 		{
 			if (e.isEquality())
 			{
 				Expression expressionLhs = e.getLHS();
 				Expression expressionRhs = e.getRHS();
+				////System.out.println("e: "+e);
+				////System.out.println("expressionLHS: "+expressionLhs);
+				////System.out.println("expressionRHS: "+expressionRhs);
 				if (expressionLhs instanceof TableFieldVariable)
 				{
 					TableField expressionLhsField = ((TableFieldVariable)expressionLhs).getField();
@@ -146,6 +148,8 @@ public class PlanGenerator {
 						lhs.add(expressionRhs);
 						rhsFieldNumbers.add(expressionLhsFieldNumber);
 						joinConditions.add(e);
+						////System.out.println("rhs: "+rhs);
+						////System.out.println("lhs: "+lhs);
 					}
 				}
 				if (expressionRhs instanceof TableFieldVariable)
@@ -158,12 +162,17 @@ public class PlanGenerator {
 						rhs.add(expressionRhs);
 						rhsFieldNumbers.add(expressionRhsFieldNumber);
 						joinConditions.add(e);
+						////System.out.println("rhs: "+rhs);
+						////System.out.println("lhs: "+lhs);
 					}
 				}
 			}
 		}
 		
 		allConditions.removeAll(joinConditions);
+		////System.out.println("allConditions2: "+allConditions);
+		////System.out.println("rhs: "+rhs);
+		////System.out.println("lhs: "+lhs);
 
 		List<Integer> rhsFieldNumbersSorted = new ArrayList<>(rhsFieldNumbers);
 		Collections.sort(rhsFieldNumbersSorted);
@@ -181,6 +190,12 @@ public class PlanGenerator {
 			lhs = newLhs;
 			rhs = newRhs;
 		}
+		////System.out.println("build: "+buildRightHashTable);
+		////System.out.println("rhs: "+rhs);
+		////System.out.println("lhs: "+lhs);
+		
+		
+		//if (rhsFieldNumbers.equals(rhsTableKeyFieldsList)) buildRightHashTable = true;
 		return new HashJoinFilter(rhsTableAlias, lhs.toArray(new Expression[lhs.size()]), rhs.toArray(new Expression[rhs.size()]), allConditions.toArray(new Expression[allConditions.size()]), buildRightHashTable);
 	}
 

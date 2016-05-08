@@ -1,14 +1,10 @@
 package giraph;
 import java.io.IOException;
-import java.rmi.dgc.VMID;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.formats.TextVertexInputFormat;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -18,6 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import schema.Database;
+import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
 import utils.AggregationFunctionType;
@@ -64,9 +61,13 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 		protected Database getValue(JSONArray jsonVertex)
 				throws JSONException, IOException {
 			
+			Metadata metadata = new Metadata();
+			
+			////System.out.println("************************************************");
 			JSONArray jsonSuperVertexValues = jsonVertex.getJSONArray(1);
 			
 			int[] vertexKeyFields = new int[]{0};
+			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
 			Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length());
 
@@ -100,9 +101,13 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			JSONArray jsonNeighborSuperVertices = jsonVertex.getJSONArray(3);
 
 			int[] neighborSuperVerticesKeyFields = new int[]{0};
+			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
 			Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, jsonNeighborSuperVertices.length());
 			
+			////System.out.println(jsonSuperVertexValues.length() + " " + nEdges + " " + jsonNeighborSuperVertices.length());
+			////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
+			long t1 = System.currentTimeMillis();
 			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
 			{
 				JSONArray jsonVertexValues = jsonSuperVertexValues.getJSONArray(i);
@@ -110,30 +115,35 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonInEdgeTupleArray = jsonVertexValues.getJSONArray(1);
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
-				Object[] vertexTuple = new Object[jsonVertexTuple.length()];
+				int[] vertexTuple = new int[jsonVertexTuple.length()];
+//				System.out.println("Size of vertex tuple = " + jsonVertexTuple.length());
 				for (int j = 0; j < jsonVertexTuple.length(); j++)
 				{
-					if (vertexFieldTypes[j] == String.class) vertexTuple[j] = jsonVertexTuple.getString(j);
-					else if (vertexFieldTypes[j] == Integer.class) vertexTuple[j] = jsonVertexTuple.getInt(j);
-					else if (vertexFieldTypes[j] == Boolean.class) vertexTuple[j] = jsonVertexTuple.getBoolean(j);
+//					System.out.println("vertexTuple["+j+"] =" + jsonVertexTuple.getInt(j));
+					if (vertexFieldTypes[j] == String.class) 
+						throw new RuntimeException("String: Unsupported data type");
+					else if (vertexFieldTypes[j] == Integer.class) 
+						vertexTuple[j] = jsonVertexTuple.getInt(j);
+					else if (vertexFieldTypes[j] == Boolean.class) 
+						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
 				vertexTable.putTuple(new Tuple(vertexTuple));
 
-				Object[] messagesTuple = new Object[3];
+				int[] messagesTuple = new int[3];
 				messagesTuple[0] = jsonVertexTuple.getInt(0);
 				messagesTuple[1] = 0;
 				messagesTuple[2] = 0;
 				messagesTable.putTuple(new Tuple(messagesTuple));
 				for (int j = 0; j < jsonInEdgeTupleArray.length(); j++)
 				{
-					Object[] edgeTuple = new Object[3];
+					int[] edgeTuple = new int[3];
 					edgeTuple[1] = jsonVertexTuple.getInt(0);
 					JSONArray edgeEndVertexAndWeight = jsonInEdgeTupleArray.getJSONArray(j);
 					edgeTuple[0] = edgeEndVertexAndWeight.getInt(0);
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
 					edgesTable.putTuple(new Tuple(edgeTuple));
 
-					Object[] neighborTuple = new Object[3];
+					int[] neighborTuple = new int[3];
 					neighborTuple[0] = jsonVertexTuple.getInt(0);
 					neighborTuple[1] = edgeEndVertexAndWeight.getInt(0);
 					neighborTuple[2] = edgeEndVertexAndWeight.getInt(1);
@@ -142,7 +152,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 
 				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
 				{
-					Object[] edgeTuple = new Object[3];
+					int[] edgeTuple = new int[3];
 					edgeTuple[0] = jsonVertexTuple.getInt(0);
 					JSONArray edgeEndVertexAndWeight = jsonOutEdgeTupleArray.getJSONArray(j);
 					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
@@ -151,20 +161,35 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
 				}
 			}
+			long t2 = System.currentTimeMillis();
+			////System.out.println(t2-t1);
+			long t3 = System.currentTimeMillis();
+
 						
 			for (int i = 0; i < jsonNeighborSuperVertices.length(); i++)
 			{
 				JSONArray jsonNeighborSuperVertexTuple = jsonNeighborSuperVertices.getJSONArray(i);
-				Object[] neighborSuperVertexTuple = new Object[3];
+				int[] neighborSuperVertexTuple = new int[3];
 				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
 				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
 			}
+			long t4 = System.currentTimeMillis();
+			////System.out.println(t4-t2);
 
-			Database database = new Database();
+			metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
+			metadata.setMetadata("edges", edgeKeyFields, edgeFieldTypes);
+			metadata.setMetadata("incomingNeighbors", incomingNeighborsKeyFields, incomingNeighborsFieldTypes);
+			metadata.setMetadata("outgoingNeighbors", outgoingNeighborsKeyFields, outgoingNeighborsFieldTypes);
+			
+//			System.out.println("Metadata after reading input " + metadata);
+			
+			Database database = new Database(metadata,-1);
 			database.addDataTable("vertices", vertexTable);
+//			System.out.println("Vertices table = " + vertexTable);
 			database.addDataTable("edges", edgesTable);
+//			System.out.println("Edges table: " + edgesTable);
 			database.addDataTable("incomingNeighbors", incomingNeighborsTable);
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
 			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);

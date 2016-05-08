@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class UserDefinedFunction extends Expression {
 
@@ -45,15 +45,15 @@ public class UserDefinedFunction extends Expression {
 	}
 	
 	@Override
-	public Object evaluate(Cursor m) {
+	public int evaluate(Cursor m) {
 		List<Object> argEvaluations = new ArrayList<Object>();
 		for (Expression arg : args)
 			argEvaluations.add(arg.evaluate(m));
 		try {
-			return function.invoke(null, argEvaluations.toArray());
+			return (int)function.invoke(null, argEvaluations.toArray());
 		} catch (Exception e) {
 			e.printStackTrace();
-			return null;
+			return -1;
 		}
 	}
 
@@ -107,7 +107,7 @@ public class UserDefinedFunction extends Expression {
 	public boolean isAggregateFunction()
 	{
 		return name.equalsIgnoreCase("COUNT")
-		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX");
+		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("FSUM")  | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX");
 	}
 	
 	public String getName()

@@ -1,14 +1,12 @@
 package query.filter;
 
 import java.util.Arrays;
-import java.util.List;
 
 import algebra.RelationalType;
-import evaluation.Cursor;
 import parser.Expression;
+import schema.Database;
 import schema.Metadata;
 import schema.Table;
-import schema.Database;
 import schema.Tuple;
 import utils.AggregationFunctionType;
 
@@ -51,7 +49,7 @@ public class ProjectFilter extends Filter {
 	}
 	
 	@Override
-	public void open(Database inputDatabase, Database outputDatabase) {
+	public void open(Database inputDatabase, Database outputDatabase, Metadata metadata) {
 
 		if (!outputDatabase.exists(outputTableName))
 		{
@@ -63,7 +61,6 @@ public class ProjectFilter extends Filter {
 		outputTable.setAggregationFunctionType(aggregationFunctionType);
 		if (isRecursive) outputTable.setRecursive();
 		if (isSourceNodeVariableUnncessary) outputTable.setSourceNodeVariableUnncessary();
-
 	}
 
 	@Override

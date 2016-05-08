@@ -1,7 +1,5 @@
 package giraph;
 
-import org.apache.giraph.combiner.MessageCombiner;
-
 import schema.Database;
 
 public class DatalogMessageCombiner 
@@ -12,8 +10,8 @@ public class DatalogMessageCombiner
 		db1.combine2(db2);
 	}
 
-	public Database createInitialMessage() {
-		return new Database();
-	}
+//	public Database createInitialMessage() {
+//		return new Database();
+//	}
 
 }

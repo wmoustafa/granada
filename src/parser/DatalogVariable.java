@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class DatalogVariable extends Term {
 	
@@ -25,10 +25,10 @@ public class DatalogVariable extends Term {
 		return name;
 	}
 	
-	public Object evaluate(Cursor c)
+	public int evaluate(Cursor c)
 	{
 		//throw new Exception
-		return null;
+		return -1;
 	}
 
 	public Expression substitute(Map<? extends Expression, ? extends Expression> m)

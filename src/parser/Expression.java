@@ -3,11 +3,11 @@ package parser;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public abstract class Expression {
 
@@ -20,7 +20,7 @@ public abstract class Expression {
 		right = r;
 	}
 
-	public abstract Object evaluate(Cursor m);
+	public abstract int evaluate(Cursor m);
 	public abstract String toString();
 	public abstract boolean equals(Object e);
 	public abstract int hashCode();

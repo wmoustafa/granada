@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class Operation extends Expression {
 
@@ -75,25 +75,21 @@ public class Operation extends Expression {
 		return left.toString()+sign+right.toString();
 	}
 	
-	public Object evaluate(Cursor m)
+	public int evaluate(Cursor m)
 	{
-		Object l = left.evaluate(m);
-		Object r = right.evaluate(m);
-		if (operationSign == OPERATION_SIGN.EQUALS) return new Boolean(l.equals(r));
-		else if (operationSign == OPERATION_SIGN.LESS_THAN) return new Boolean(((Comparable)l).compareTo((Comparable)r) < 0);
-		else if (operationSign == OPERATION_SIGN.PLUS) return new Integer((Integer)l + (Integer) r);
-		else if (operationSign == OPERATION_SIGN.GREATER_THAN) return new Boolean(((Comparable)l).compareTo((Comparable)r) > 0);
-		else if (operationSign == OPERATION_SIGN.NOT_EQUALS) return new Boolean(!l.equals(r));
-		else if (operationSign == OPERATION_SIGN.DIVIDE) 
-		{
-			if (((Float)r).equals(0.0)) return new String("0");
-			else return String.valueOf(Float.parseFloat(l.toString()) / Float.parseFloat(r.toString()));
-		}
-		else if (operationSign == OPERATION_SIGN.MINUS) return new Integer((Integer)l - (Integer) r);
-		else if (operationSign == OPERATION_SIGN.TIMES) return new Integer((Integer)l * (Integer) r);
-		else if (operationSign == OPERATION_SIGN.OR) return new Boolean((Boolean)l || (Boolean)r);
-		else if (operationSign == OPERATION_SIGN.AND) return new Boolean((Boolean)l && (Boolean)r);
-		else return null;
+		int l = left.evaluate(m);
+		int r = right.evaluate(m);
+		if (operationSign == OPERATION_SIGN.EQUALS) return l == r ? 1:0;
+		else if (operationSign == OPERATION_SIGN.LESS_THAN) return l < r ? 1 :0 ;
+		else if (operationSign == OPERATION_SIGN.PLUS) return l + r;
+		else if (operationSign == OPERATION_SIGN.GREATER_THAN) return l > r?1:0;
+		else if (operationSign == OPERATION_SIGN.NOT_EQUALS) return l != r?1:0;
+		else if (operationSign == OPERATION_SIGN.DIVIDE) return Float.floatToIntBits(Float.intBitsToFloat(l)/r);  
+		else if (operationSign == OPERATION_SIGN.MINUS) return l - r;
+		else if (operationSign == OPERATION_SIGN.TIMES) return l * r;
+		else if (operationSign == OPERATION_SIGN.OR) throw new RuntimeException("OR: Unsupported operation.");
+		else if (operationSign == OPERATION_SIGN.AND) throw new RuntimeException("AND: Unsupported operation.");
+		else return -1;
 	}
 
 	public Expression substitute(Map<? extends Expression, ? extends Expression> m)

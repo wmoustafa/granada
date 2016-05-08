@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class BooleanConst extends Term {
 	
@@ -47,9 +47,9 @@ public class BooleanConst extends Term {
 		return true;
 	}
 
-	public Object evaluate(Cursor m)
+	public int evaluate(Cursor m)
 	{
-		return value;
+		return value?1:0;
 	}
 
 	public Expression substitute(Map<? extends Expression, ? extends Expression> m)

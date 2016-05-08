@@ -4,11 +4,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import schema.Database;
-import schema.Metadata;
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
+import schema.Database;
+import schema.Metadata;
 
 public class IntegerConst extends Term {
 	
@@ -38,7 +38,7 @@ public class IntegerConst extends Term {
 		return true;
 	}
 
-	public Object evaluate(Cursor m)
+	public int evaluate(Cursor m)
 	{
 		return value;
 	}

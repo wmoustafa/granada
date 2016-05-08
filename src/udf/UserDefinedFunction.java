@@ -1,6 +1,5 @@
 	package udf;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.PriorityQueue;
 import java.util.Set;
@@ -35,6 +34,7 @@ public class UserDefinedFunction {
 
 	public static Integer INT(Object arg1)
 	{
+		//System.out.println("&&&"+arg1);
 		String s = arg1.toString();
 		return (int)Float.parseFloat(s);
 	}

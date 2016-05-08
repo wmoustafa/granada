@@ -3,6 +3,7 @@ package parser;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
 import evaluation.Cursor;
 import evaluation.TableAlias;
 import evaluation.TableField;
@@ -25,7 +26,7 @@ public class TableFieldVariable extends Term {
 		return field.toString();
 	}
 	
-	public Object evaluate(Cursor c)
+	public int evaluate(Cursor c)
 	{
 		return c.getValue(field);
 	}

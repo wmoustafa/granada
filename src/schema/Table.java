@@ -1,57 +1,52 @@
 package schema;
 
-import giraph.SuperVertexId;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
-import maputil.GoogleMultimap;
-import maputil.Multimap;
-
-import org.apache.commons.lang.exception.ExceptionUtils;
-import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
 
-import parser.IntegerConst;
+import algebra.RelationalType;
+import giraph.SuperVertexId;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import maputil.Multimap;
 import utils.AggregationFunctionType;
 import utils.PrettyPrinter;
-import algebra.RelationalType;
 
 
 
 public class Table implements Writable {
 
+	public enum edb_columns { 
+		VERTICES(2), EDGES(3), NEIGHBORS(3), MESSAGES(3);
+		
+		private int value;
+		private edb_columns(int value) { this.value = value; }
+		
+	}
 	
+	private String name;
 	private Class[] fieldTypes;
 	private int[] keyFields;
-	private Multimap<Tuple, Tuple> data;
+	private Multimap<Integer, Tuple> data;
 	private int size=0;
 	private boolean isAggregate;
 	private RelationalType relationalType = RelationalType.NOT_RELATIONAL;
 	private boolean isRecursive = false;
 	private boolean isSourceNodeVariableUnncessary = false;
 	private AggregationFunctionType aggregationFunctionType = AggregationFunctionType.NONE;
-	private static final Logger LOG =
-		      Logger.getLogger(Table.class);
+	private static final Logger LOG =  Logger.getLogger(Table.class);
+	private edb_columns type;
+	private Metadata metadata;
+
 	
 	/*public Table()
 	{
@@ -66,7 +61,16 @@ public class Table implements Writable {
 		this.keyFields = keyFields;
 		this.data = new Multimap();
 	}
-		
+	
+	public Table(Class[] fieldTypes, int[] keyFields, String name)
+	{
+		this.fieldTypes = fieldTypes;
+		this.keyFields = keyFields;
+		this.data = new Multimap();
+		this.name = name;
+	}
+	
+	
 	public Table(Class[] fieldTypes, int[] keyFields, int initialSize)
 	{
 		this.fieldTypes = fieldTypes;
@@ -117,6 +121,14 @@ public class Table implements Writable {
 		return isAggregate;
 	}
 	
+	public void setType(edb_columns c) {
+		this.type = c;
+	}
+	
+	public void setName(String name){
+		this.name = name;
+	}
+	
 	public RelationalType getRelationalType()
 	{
 		return relationalType;
@@ -124,90 +136,125 @@ public class Table implements Writable {
 
 	public boolean addTuple(Tuple tuple)
 	{
-		Tuple key = getKey(tuple);
+		int key = getKey(tuple);
 		return addTuple(key, tuple);
 	}
 	
 	public void putTuple(Tuple tuple)
 	{
-		Tuple key = getKey(tuple);
+		int key = getKey(tuple);
 		data.put(key, tuple);
 	}
-
-	public boolean addTuple(Tuple key, Tuple value)
+	
+	public boolean addTuple(int key, Tuple value)
 	{
 		if (!isAggregate && data.contains(key, value)) return false; 
 		if (isAggregate)
 		{
-			Object[] toBeInserted = value.toArray();
+			int[] toBeInserted = value.toArray();
 			int aggregateArgIndex = toBeInserted.length - 1;
 			for (Tuple t : data.get(key))
 			{
-				Object[] existing = t.toArray();
+				int[] existing = t.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (!toBeInserted[i].equals(existing[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (toBeInserted[i] != (existing[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
-				{
-					
+				{					
 					int existingValueBeforeCombining = (Integer)existing[aggregateArgIndex];
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
-					if (aggregationFunctionType == AggregationFunctionType.SUM)
-						existing[aggregateArgIndex] = (Integer)toBeInserted[aggregateArgIndex] + (Integer)existing[aggregateArgIndex];
-					else if (aggregationFunctionType == AggregationFunctionType.MIN)
-						if (((Integer)toBeInserted[aggregateArgIndex]).intValue() < ((Integer) existing[aggregateArgIndex]).intValue()) { existing[aggregateArgIndex]=(Integer)toBeInserted[aggregateArgIndex] ;}
+					if (aggregationFunctionType == AggregationFunctionType.SUM){
+						existing[aggregateArgIndex] = toBeInserted[aggregateArgIndex] + 
+						existing[aggregateArgIndex];
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MIN) {
+						if (toBeInserted[aggregateArgIndex] < existing[aggregateArgIndex]) {
+							existing[aggregateArgIndex]= toBeInserted[aggregateArgIndex];
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM){
+						existing[aggregateArgIndex] = existing[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat(toBeInserted[aggregateArgIndex]) +  
+						Float.intBitsToFloat(existing[aggregateArgIndex])); 
+
+					}
 					
-					if ((Integer)existing[aggregateArgIndex] == existingValueBeforeCombining) return false; else return true;
+					if (existing[aggregateArgIndex] == existingValueBeforeCombining) 
+						return false; 
+					else return true;
 					
 				}				
 			}
 		}
+//		System.out.println("Add tuple key = " + key + ", value = " + value);
 		data.put(key, value);
 		return true;
 	}
 	
-	public boolean refreshTuple(Table deltaTable, Tuple deltaTuple, LinkedList<Tuple> toBeRemoved)
+	public boolean addAndSubtractTuple(Table deltaTable, Tuple deltaTuple, LinkedList<Tuple> toBeRemoved)
 	{
-		Tuple deltaKey = getKey(deltaTuple);
+		int deltaKey = getKey(deltaTuple);
 		Tuple deltaValue = deltaTuple;
-		if (!isAggregate && data.contains(deltaKey, deltaValue)) { toBeRemoved.add(deltaValue); return false; } 
+//		System.out.println("base table is aggregate:" + isAggregate);
+//		System.out.println("delta table is aggregate:" + deltaTable.isAggregate);
+		if (!isAggregate && data.contains(deltaKey, deltaValue)) 
+		{ 
+			toBeRemoved.add(deltaValue); 
+			return false; 
+		} 
 		if (isAggregate || deltaTable.isAggregate)
 		{
-			Object[] deltaValueAsArray = deltaValue.toArray();
+			int[] deltaValueAsArray = deltaValue.toArray();
 			int aggregateArgIndex = deltaValueAsArray.length - 1;
 			for (Tuple baseValue : data.get(deltaKey))
 			{
-				Object[] baseValueAsArray = baseValue.toArray();
+				int[] baseValueAsArray = baseValue.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (!deltaValueAsArray[i].equals(baseValueAsArray[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (deltaValueAsArray[i] != (baseValueAsArray[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
-				{
+				{				
 					//FOR UPDATING DELTA
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
 					if (aggregationFunctionType == AggregationFunctionType.MIN)
-						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() >= ((Integer) baseValueAsArray[aggregateArgIndex]).intValue()){toBeRemoved.add(deltaValue); return false;}
+						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() >= 
+						((Integer) baseValueAsArray[aggregateArgIndex]).intValue())
+						{
+							toBeRemoved.add(deltaValue); 
+							return false;
+						}
 
 					int existingValueBeforeCombining = (Integer)baseValueAsArray[aggregateArgIndex];
 					//FOR UPDATING BASE
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
 					if (aggregationFunctionType == AggregationFunctionType.SUM)
-						baseValueAsArray[aggregateArgIndex] = (Integer)deltaValueAsArray[aggregateArgIndex] + (Integer)baseValueAsArray[aggregateArgIndex];
-					else if (aggregationFunctionType == AggregationFunctionType.MIN)
-						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() < ((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) { baseValueAsArray[aggregateArgIndex] = deltaValueAsArray[aggregateArgIndex]; }
+						baseValueAsArray[aggregateArgIndex] = (Integer)deltaValueAsArray[aggregateArgIndex] +
+						(Integer)baseValueAsArray[aggregateArgIndex];
+					else if (aggregationFunctionType == AggregationFunctionType.MIN) {
+						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() < 
+								((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) 
+						{
+							baseValueAsArray[aggregateArgIndex] = deltaValueAsArray[aggregateArgIndex]; 
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM)
+						baseValueAsArray[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat((Integer)deltaValueAsArray[aggregateArgIndex]) + 
+						Float.intBitsToFloat((Integer)baseValueAsArray[aggregateArgIndex])); 
 						
-					if ((Integer)baseValueAsArray[aggregateArgIndex] == existingValueBeforeCombining) return false; else return true;
+					if ((Integer)baseValueAsArray[aggregateArgIndex] == existingValueBeforeCombining) 
+						return false; 
+					else return true;
 				}				
-			}
-			
+			}			
 		}
 		data.put(deltaKey, deltaValue);
 		return true;	
@@ -215,33 +262,42 @@ public class Table implements Writable {
 
 	public void diff(Table otherTable, Tuple tuple)
 	{
-		Tuple key = getKey(tuple);
+		int key = getKey(tuple);
 		Tuple value = tuple;
 		if (!isAggregate && otherTable.data.contains(key, value)) { data.remove(key, value); return;} 
 		if (isAggregate)
 		{
-			Object[] toBeInserted = value.toArray();
+			int[] toBeInserted = value.toArray();
 			int aggregateArgIndex = toBeInserted.length - 1;
 			Tuple existingAggregateTuple = null;
 			for (Tuple t : otherTable.data.get(key))
 			{
-				Object[] existing = t.toArray();
+				int[] existing = t.toArray();
 				boolean equalGroup = true;
-				for (int i = 0; i < aggregateArgIndex; i++)
-					if (!toBeInserted[i].equals(existing[i]))
-					{
-						equalGroup = false;
-						break;
-					}
+				if (aggregateArgIndex > 1)	
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (toBeInserted[i] == (existing[i]))
+						{
+							equalGroup = false;
+							break;
+						}
 				if (equalGroup)
 				{
-					if (toBeInserted[aggregateArgIndex].equals(existing[aggregateArgIndex])) {data.remove(key, value); return;}
+					if (toBeInserted[aggregateArgIndex] == (existing[aggregateArgIndex])) {
+						data.remove(key, value); 
+						return;
+					}
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
 					// SUM AGGREGATE:
-					toBeInserted[aggregateArgIndex] =  (Integer)toBeInserted[aggregateArgIndex] - (Integer)existing[aggregateArgIndex];
+					if (aggregationFunctionType == AggregationFunctionType.SUM) {
+						toBeInserted[aggregateArgIndex] =  (Integer)toBeInserted[aggregateArgIndex] - 
+								(Integer)existing[aggregateArgIndex];
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM) {
+						toBeInserted[aggregateArgIndex] =  Float.floatToIntBits(Float.intBitsToFloat((Integer)toBeInserted[aggregateArgIndex]) -  
+						Float.intBitsToFloat((Integer)existing[aggregateArgIndex])); 
+					}
 					// MIN AGGREGATE: do nothing 
-					
-					
 					break;
 				}				
 			}
@@ -263,30 +319,37 @@ public class Table implements Writable {
 		return data.size();
 	}
 	
-	public Multimap<Tuple, Tuple> getData()
+	public Multimap<Integer, Tuple> getData()
 	{
 		return data;
 	}
 	
-	public Tuple getKey(Tuple value)
+	public int getKey(Tuple value)
 	{
-		Object[] keys = new Object[keyFields.length];
-		Object[] tupleArray = value.toArray();
-		int i = 0;
-		for (int keyField : keyFields) keys[i++] = tupleArray[keyField];
-		Tuple key = new Tuple(keys);
-		return key;
+		assert(keyFields.length == 1);
+//		System.out.println("Add tupe " + value);
+//		System.out.println("Keyfields = " + Arrays.toString(keyFields));
+		//int[] keys = new int[keyFields.length];
+		//int[] tupleArray = value.toArray();
+		
+//		int i = 0;
+//		for (int keyField : keyFields) keys[i++] = tupleArray[keyField];
+//		Tuple key = new Tuple(keys);
+		return value.toArray()[keyFields[0]];
 	}
 	
 	public String toString()
 	{
-		String[][] dataAsMatrix = new String[data.size()][keyFields.length + fieldTypes.length];
+//		System.out.println("Field types = " + fieldTypes.length);
+		//return String.valueOf(data.size());
+		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
 		for (Tuple tuple : data.values())
 		{
 			int j = 0;
-			for (Object key : getKey(tuple).toArray())
-				dataAsMatrix[i][j++] = key.toString();
+//			System.out.println("Key = " + String.valueOf(getKey(tuple)));
+//			System.out.println("Value = " + Arrays.toString(tuple.toArray()));
+			dataAsMatrix[i][j++] = String.valueOf(getKey(tuple));
 			for (Object value : tuple.toArray())
 				dataAsMatrix[i][j++] = value.toString();
 			i++;
@@ -297,15 +360,17 @@ public class Table implements Writable {
 	public boolean combine(Table otherTable)
 	{
 		boolean tableChanged = false;
+		////System.out.println("Combining isAgg:" + isAggregate + "" + this);
 		for (Tuple tuple : otherTable.data.values())
 		{
+			////System.out.println("with tuple " + tuple);
 			boolean tupleChanged = addTuple(tuple);
 			if (tupleChanged) tableChanged = true;
 		}
 		return tableChanged;
 	}
 
-	public boolean refresh(Table deltaTable)
+	public boolean combineAndSubtract(Table deltaTable)
 	{
 		setAggregationFunctionType(deltaTable.aggregationFunctionType);
 		setRelationalType(deltaTable.relationalType);
@@ -313,10 +378,12 @@ public class Table implements Writable {
 		if (deltaTable.isSourceNodeVariableUnncessary) setSourceNodeVariableUnncessary();
 		
 		boolean tableChanged = false;
+		////System.out.println("Combining isAgg:" + isAggregate + "" + this);
 		LinkedList<Tuple> toBeRemoved = new LinkedList<Tuple>();
 		for (Tuple tuple : deltaTable.data.values())
 		{
-			boolean tupleChanged = refreshTuple(deltaTable, tuple, toBeRemoved);
+			////System.out.println("with tuple " + tuple);
+			boolean tupleChanged = addAndSubtractTuple(deltaTable, tuple, toBeRemoved);
 			if (tupleChanged) tableChanged = true;
 		}
 		for (Tuple tuple : toBeRemoved)
@@ -324,6 +391,25 @@ public class Table implements Writable {
 		return tableChanged;
 	}
 
+	public void subtract2(Table fullTable)
+	{
+		////System.out.println("Subtracting:" + isAggregate + "" + otherTable);
+		////System.out.println("from " + this);
+		for (Tuple tuple : data.values())
+		{
+			diff(fullTable, tuple);
+		}
+	}
+
+	public void subtract(Table otherTable)
+	{
+		////System.out.println("Subtracting:" + isAggregate + "" + otherTable);
+		////System.out.println("from " + this);
+		for (Tuple tuple : data.values())
+		{
+			diff(otherTable, tuple);
+		}
+	}
 
 	public boolean isEmpty()
 	{
@@ -335,15 +421,15 @@ public class Table implements Writable {
 		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
 		for (Tuple value : data.values())
 		{
-			Tuple key = getKey(value);
+			int key = getKey(value);
 
 			Collection<Tuple> neighbors = neighborsTable.data.get(key);
 			for (Tuple n : neighbors)
 			{
 			int neighborId = (Integer)n.toArray()[1];
-			Tuple neighborsSuperVerticesKey = new Tuple(new Object[]{neighborId});
+			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
-			Object[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
 			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
 			Table existingTable = partitionedTable.get(neighborSuperVertexId);
 			if (existingTable == null)
@@ -361,7 +447,7 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 	
-	public Map<SuperVertexId,Table> partitionUseSemiJoin(Table neighborsSuperVerticesTable)
+	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
 		// The line below should change if source node index changes
@@ -373,16 +459,33 @@ public class Table implements Writable {
 		if (isAggregate) neighborIdIndex = fieldTypes.length - 2;
 		else neighborIdIndex = fieldTypes.length - 1;
 
+//		System.out.println("Neighbor super vertices table = " + neighborsSuperVerticesTable);
+//		System.out.println("Neighbor ID index = " + neighborIdIndex);
+		
 		for (Tuple value : data.values())
 		{
-			Tuple key = getKey(value);
-			Object[] tupleArray = value.toArray();
-
-			int neighborId = (Integer)tupleArray[neighborIdIndex];
-			Tuple neighborsSuperVerticesKey = new Tuple(new Object[]{neighborId});
-			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
-			Object[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+			int key = getKey(value);
+			int[] tupleArray = value.toArray();
+			int neighborId = tupleArray[neighborIdIndex];
+			SuperVertexId neighborSuperVertexId= null;
+			if((neighborSuperVertexId = neighbors.get(neighborId)) == null)
+			{
+				 
+//				System.out.println("Neighbor id = " + neighborId);
+				int neighborsSuperVerticesKey = neighborId;
+				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(
+						neighborsSuperVerticesKey).iterator().next();
+//				System.out.println("Neighbor super vertex tuple = " + neighborSuperVertexTuple);
+				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+				neighborSuperVertexId = new SuperVertexId(
+						Integer.valueOf(neighborSuperVertexArray[1]).shortValue(), 
+						neighborSuperVertexArray[2]);
+				neighbors.put(neighborId, neighborSuperVertexId);
+			}
+//			else
+//			{
+//				System.out.println("Found neighbor:"+ neighborId +" , super=" + neighborSuperVertexId);
+//			}
 			Table existingTable = partitionedTable.get(neighborSuperVertexId);
 			if (existingTable == null)
 			{
@@ -395,7 +498,7 @@ public class Table implements Writable {
 			}
 			//if (!existingTable.data.contains(key, value))
 			{
-				if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
+				//if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
 				//existingTable.data.put(key, value);
 				existingTable.addTuple(key, value);
 			}
@@ -404,16 +507,15 @@ public class Table implements Writable {
 	}
 
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionUseSemiAsync(Table neighborsTable, Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessages(Table neighborsTable, Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
 		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();		// The line below should change if source node index changes
 
 		for (Tuple value : data.values())
 		{
-			Tuple key = getKey(value);
-
+			int key = getKey(value);
 			int iterationNumber = 1;
-
+			
 			//For PageRank
 			iterationNumber = (Integer)(value.toArray()[1]);
 			
@@ -428,9 +530,9 @@ public class Table implements Writable {
 			for (Tuple n : neighbors)
 			{
 				int neighborId = (Integer)n.toArray()[1];
-				Tuple neighborsSuperVerticesKey = new Tuple(new Object[]{neighborId});
+				int neighborsSuperVerticesKey = neighborId;
 				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
-				Object[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
 				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
 				PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 				if (existingPartitionWithMessages == null)
@@ -446,7 +548,8 @@ public class Table implements Writable {
 					existingPartitionWithMessages = new PartitionWithMessages(partition, neighborMessagesTable);
 					partitionedTableWithMessages.put(neighborSuperVertexId, existingPartitionWithMessages);
 				}
-				if (!existingPartitionWithMessages.partition.data.contains(key, value)) existingPartitionWithMessages.partition.data.put(key, value);
+				if (!existingPartitionWithMessages.partition.data.contains(key, value))
+					existingPartitionWithMessages.partition.data.put(key, value);
 				addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
 			}
 			//resetNumberOfMessages(key, iterationNumber, messagesTable);
@@ -454,7 +557,7 @@ public class Table implements Writable {
 		return partitionedTableWithMessages;
 	}
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionUseSemiJoinSemiAsync(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
 		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
 		// The line below should change if source node index changes
@@ -470,17 +573,16 @@ public class Table implements Writable {
 		Set<Tuple> processedSourceNodeIdAndIterationNumberTuples = new HashSet<>();
 		for (Tuple value : data.values())
 		{
-			Object[] tupleArray = value.toArray();
-
-			Tuple destNodeIdTuple = getKey(value);
+			int[] tupleArray = value.toArray();
+			int destNodeIdTuple = getKey(value);
 
 			int iterationNumber = 1;
 
 			//For PageRank
 			iterationNumber = (Integer)(value.toArray()[1]);
 
-			Tuple sourceNodeIdTuple = new Tuple(new Object[]{tupleArray[sourceNodeIdIndex]});
-			Tuple sourceNodeIdAndIterationNumberTuple = new Tuple(new Object[]{tupleArray[sourceNodeIdIndex], iterationNumber});
+			int sourceNodeIdTuple = tupleArray[sourceNodeIdIndex];
+			Tuple sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], iterationNumber});
 
 			int numberOfRecievedMessages = getNumberOfMessages(sourceNodeIdTuple, iterationNumber - 1, messagesTable);
 			int numberOfOtherSideNeighbors = getNumberOfNeighbors(sourceNodeIdTuple, otherDirectionNeighborsTable);
@@ -492,9 +594,9 @@ public class Table implements Writable {
 				{ if (numberOfRecievedMessages != numberOfOtherSideNeighbors) continue; }
 
 			int neighborId = (Integer)tupleArray[neighborIdIndex];
-			Tuple neighborsSuperVerticesKey = new Tuple(new Object[]{neighborId});
+			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
-			Object[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
 			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
 			PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 			if (existingPartitionWithMessages == null)
@@ -519,6 +621,12 @@ public class Table implements Writable {
 			
 			processedSourceNodeIdAndIterationNumberTuples.add(sourceNodeIdAndIterationNumberTuple);
 		}
+		//for (Tuple processedSourceNodeIdAndIterationNumberTuple : processedSourceNodeIdAndIterationNumberTuples)
+		//{
+			//Tuple sourceNodeIdTuple = new Tuple(new Object[]{processedSourceNodeIdAndIterationNumberTuple.toArray()[0]});
+			//int iterationNumber = (int)processedSourceNodeIdAndIterationNumberTuple.toArray()[1];
+			//resetNumberOfMessages(sourceNodeIdTuple, iterationNumber, messagesTable);
+		//}
 		return partitionedTableWithMessages;
 	}
 
@@ -534,7 +642,7 @@ public class Table implements Writable {
 	
 	void addSingleMessage(int destinationVertexId, int iterationNumber, Table messagesTable)
 	{
-		Object[] messagesTuple = new Object[3];
+		int[] messagesTuple = new int[3];
 		messagesTuple[0] = destinationVertexId;
 		messagesTuple[1] = iterationNumber;
 		messagesTuple[2] = 1;
@@ -553,34 +661,36 @@ public class Table implements Writable {
 		
 	}
 
-	int getNumberOfMessages(Tuple key, int iterationNumber, Table messagesTable)
+	int getNumberOfMessages(int key, int iterationNumber, Table messagesTable)
 	{
 		for (Tuple messageTuple : messagesTable.data.get(key))
 		{
-			Object[] messageTupleArray = messageTuple.toArray();
+			int[] messageTupleArray = messageTuple.toArray();
 			if ((Integer)messageTupleArray[1] == iterationNumber) return (Integer)messageTupleArray[2];
 		}
 		return 0;
 	}
 	
-	void resetNumberOfMessages(Tuple key, int iterationNumber, Table messagesTable)
+	void resetNumberOfMessages(int key, int iterationNumber, Table messagesTable)
 	{
 		Tuple toDelete = null;
 		for (Tuple messageTuple : messagesTable.data.get(key))
 		{
-			Object[] messageTupleArray = messageTuple.toArray();
+			int[] messageTupleArray = messageTuple.toArray();
 			if ((Integer)messageTupleArray[1] == iterationNumber) toDelete = messageTuple;
 		}
 		if (toDelete != null) messagesTable.data.remove(key, toDelete);
 	}
 
 	
-int getNumberOfNeighbors(Tuple key, Table neighborsTable)
+int getNumberOfNeighbors(int key, Table neighborsTable)
 	{
 		int numberOfNeighbors = 0;
 		for (Tuple t : neighborsTable.data.get(key))
+			//if ((Integer)t.toArray()[1] <= 30) 
 				numberOfNeighbors++;
 		return numberOfNeighbors;
+		//return neighborsTable.data.get(key).size();
 	}
 
 	public void readFieldsOriginal(DataInput in) throws IOException {
@@ -601,14 +711,16 @@ int getNumberOfNeighbors(Tuple key, Table neighborsTable)
 			keyFields[i] = WritableUtils.readVInt(in);
 
 		size = WritableUtils.readVInt(in);
+		//data = HashMultimap.create();
 		for (int k = 0; k < size; k++)
 		{
-			Object[] array = new Object[fieldTypes.length];
+			int[] array = new int[fieldTypes.length];
 			for (int i = 0; i < fieldTypes.length; i++)
 			{
-				if (fieldTypes[i] == String.class) array[i] = WritableUtils.readCompressedString(in);
-				else if (fieldTypes[i] == Integer.class) array[i] = WritableUtils.readVInt(in);
-				else if (fieldTypes[i] == Boolean.class) array[i] = (WritableUtils.readVInt(in) == 1);
+				if (fieldTypes[i] == Integer.class) array[i] = WritableUtils.readVInt(in);
+				else throw new RuntimeException("Unsupported data type");
+//				else if (fieldTypes[i] == String.class) array[i] = WritableUtils.readCompressedString(in);
+//				else if (fieldTypes[i] == Boolean.class) array[i] = (WritableUtils.readVInt(in) == 1);
 			}
 			Tuple tuple = new Tuple(array);
 			addTuple(tuple);
@@ -617,104 +729,82 @@ int getNumberOfNeighbors(Tuple key, Table neighborsTable)
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		int nFieldTypes = in.readInt();
-		isRecursive = in.readBoolean();
-		isSourceNodeVariableUnncessary = in.readBoolean();
-		relationalType = RelationalType.values()[in.readByte()];
-		setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
-		fieldTypes = new Class[nFieldTypes];
-		for (int i = 0; i < nFieldTypes; i++)
-		{
-			byte fieldType = in.readByte();
-			if (fieldType == 1) fieldTypes[i] = Integer.class;
-			else if (fieldType == 0) fieldTypes[i] = String.class;
-			else if (fieldType == 2) fieldTypes[i] = Boolean.class;
-		}
 
-		int nKeyFields = in.readInt();
-		keyFields = new int[nKeyFields];
-		for (int i = 0; i < nKeyFields; i++)
-			keyFields[i] = in.readInt();
 
-		size = in.readInt();
-		data = new Multimap<>();
-		if (isSourceNodeVariableUnncessary)
-		{
+			int nFieldTypes = in.readInt();
+			isRecursive = in.readBoolean();
+			isSourceNodeVariableUnncessary = in.readBoolean();
+			relationalType = RelationalType.values()[in.readByte()];
+			setAggregationFunctionType(AggregationFunctionType.values()[in.readByte()]);
+			fieldTypes = new Class[nFieldTypes];
+						
+			for (int i = 0; i < nFieldTypes; i++)
+			{
+				byte fieldType = in.readByte();
+				if (fieldType == 1) fieldTypes[i] = Integer.class;
+				else if (fieldType == 0) fieldTypes[i] = String.class;
+				else if (fieldType == 2) fieldTypes[i] = Boolean.class;
+			}
+
+			int nKeyFields = in.readInt();
+			keyFields = new int[nKeyFields];
+			for (int i = 0; i < nKeyFields; i++)
+				keyFields[i] = in.readInt();
+	
+			size = in.readInt();
+			data = new Multimap<>();
+			int index = isSourceNodeVariableUnncessary? 1:0;
 			for (int k = 0; k < size; k++)
 			{
-				Object[] array = new Object[fieldTypes.length];
-				array[0] = 0;
-				for (int i = 1; i < fieldTypes.length; i++)
+				
+				int[] array = new int[nFieldTypes];
+				if (isSourceNodeVariableUnncessary)
 				{
-					if (fieldTypes[i] == Integer.class) array[i] = in.readInt();
-					else if (fieldTypes[i] == String.class) array[i] = in.readUTF();
-					else if (fieldTypes[i] == Boolean.class) array[i] = in.readBoolean();
+					array[0] = 0;
+				}
+				for (int i = index; i < nFieldTypes; i++)
+				{
+					array[i] = in.readInt();
 				}
 				Tuple tuple = new Tuple(array);
 				addTuple(tuple);
-			}
-		}
-		else	
-			for (int k = 0; k < size; k++)
-			{
-				Object[] array = new Object[fieldTypes.length];
-				for (int i = 0; i < fieldTypes.length; i++)
-				{
-					if (fieldTypes[i] == Integer.class) array[i] = in.readInt();
-					else if (fieldTypes[i] == String.class) array[i] = in.readUTF();
-					else if (fieldTypes[i] == Boolean.class) array[i] = in.readBoolean();
-				}
-				Tuple tuple = new Tuple(array);
-				addTuple(tuple);
-			}
+			}	
+		
 	}
 
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		out.writeInt(fieldTypes.length);
-		out.writeBoolean(isRecursive);
-		out.writeBoolean(isSourceNodeVariableUnncessary);		
-		out.writeByte(relationalType.ordinal());
-		out.writeByte(aggregationFunctionType.ordinal());
-		for (Class fieldType : fieldTypes)
-			if (fieldType == Integer.class) out.writeByte(1);
-			else if (fieldType == String.class) out.writeByte(0);
-			else if (fieldType == Boolean.class) out.writeByte(2);
 
-		out.writeInt( keyFields.length);
-		for (int keyField : keyFields)
-			out.writeInt(keyField);
-		
-		out.writeInt(data.size());
-		if (isSourceNodeVariableUnncessary)
-		{
+//			System.out.println("Write field types length = " + fieldTypes.length);
+			out.writeInt(fieldTypes.length);
+			out.writeBoolean(isRecursive);			
+			out.writeBoolean(isSourceNodeVariableUnncessary);		
+			out.writeByte(relationalType.ordinal());
+			out.writeByte(aggregationFunctionType.ordinal());
+			for (Class fieldType : fieldTypes)
+				if (fieldType == Integer.class) out.writeByte(1);
+				else if (fieldType == String.class) out.writeByte(0);
+				else if (fieldType == Boolean.class) out.writeByte(2);
+
+			out.writeInt( keyFields.length);
+			for (int keyField : keyFields)
+				out.writeInt(keyField);
+			
+			out.writeInt(data.size());
+			
+			int index;
+			index = isSourceNodeVariableUnncessary? 1:0;
+	
 			for (Tuple tuple : data.values())
 			{
-				Object[] array = tuple.toArray(); 
-				for (int i = 1; i < array.length; i++)
+				int[] array = tuple.toArray(); 
+				for (int i = index; i < array.length; i++)
 				{
-					Object value = array[i];
-					if (fieldTypes[i] == Integer.class) out.writeInt((Integer) value);
-					else if (fieldTypes[i] == String.class) out.writeUTF((String) value);
-					else if (fieldTypes[i] == Boolean.class) out.writeBoolean((Boolean) value);
+					out.writeInt(array[i]);
 				}
-			}
-		}
-		else
-		{
-			for (Tuple tuple : data.values())
-			{
-				Object[] array = tuple.toArray(); 
-				for (int i = 0; i < array.length; i++)
-				{
-					Object value = array[i];
-					if (fieldTypes[i] == Integer.class) out.writeInt((Integer) value);
-					else if (fieldTypes[i] == String.class) out.writeUTF((String) value);
-					else if (fieldTypes[i] == Boolean.class) out.writeBoolean((Boolean) value);
-				}
-			}
-		}
-		
+			}			
+			
+			
 	}
 }
