@@ -88,7 +88,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //				System.out.println("Evaluating " + rule );
 				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
 //				rule.getEvaluationPlan().print();
-				System.out.println("Output:" + outputDatabase);
+				//System.out.println("Output:" + outputDatabase);
 //				end = System.currentTimeMillis();
 //				aggregate("EVALUATE_RULE", new LongWritable(end-start));
 				
