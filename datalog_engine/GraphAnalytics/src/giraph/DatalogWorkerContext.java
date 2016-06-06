@@ -38,7 +38,7 @@ public class DatalogWorkerContext extends WorkerContext {
 			conf = getConf();
 
 			FileSystem fs = FileSystem.get(conf);
-			FSDataInputStream in = fs.open(new Path("hdfs://localhost:9000/user/hadoop/input/" + getProgramName() + ".txt"));
+			FSDataInputStream in = fs.open(new Path("hdfs://b09-26.sysnet.ucsd.edu:9000/user/hadoop/input/" + getProgramName() + ".txt"));
 
 			Parser parser = new Parser(in);
 			Program program = parser.program();
@@ -99,10 +99,10 @@ public class DatalogWorkerContext extends WorkerContext {
 			//System.out.println("predicatesToProcess " + rulesToProcess);
 		}
 		////System.out.println(this.getSuperstep());
-//		System.out.println("-----> Now going to process: " +rulesToProcess);
+		System.out.println("-----> Now going to process: " +rulesToProcess);
 		////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
 		for (Rule rule : rulesToProcess) {
-			System.out.println("Evaluating rule " + rule + " with plan ");
+			//System.out.println("Evaluating rule " + rule + " with plan ");
 			rule.generateEvaluationPlan(null,metadata);
 			rule.getEvaluationPlan().print();
 		}

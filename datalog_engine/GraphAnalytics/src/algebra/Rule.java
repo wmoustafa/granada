@@ -389,6 +389,9 @@ public class Rule {
 			DatalogVariable w = topologicalOrder.get(i);
 			if (dag.containsEntry(w, v)) { predecessor = w; break; }
 		}*/
+		System.out.println(this);
+		System.out.println(v);
+
 		Set<DatalogVariable> predecessors = new HashSet<DatalogVariable>();
 		Set<DatalogVariable> successors = new HashSet<DatalogVariable>();
 		for (Entry<DatalogVariable,DatalogVariable> entry : dag.entries())
@@ -403,7 +406,7 @@ public class Rule {
 		for (int i = topologicalOrder.indexOf(v) + 1; i < topologicalOrder.size(); i++)
 			prohibitedDatalogVariables.add(topologicalOrder.get(i));
 		Rule rewrite = new Rule();
-		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString());// + toString().hashCode());
+		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString() + toString().hashCode());
 		Set<Predicate<Expression>> rewriteLiteralSubgoals = new HashSet<Predicate<Expression>>();
 		Set<Expression> rewriteConditionSubgoals = new HashSet<Expression>();
 		Set<Expression> projectionFields = new LinkedHashSet<Expression>();
@@ -422,6 +425,8 @@ public class Rule {
 		
 		for (DatalogVariable predecessor : predecessors)
 		{
+			System.out.println(previousRules);
+			System.out.println(predecessor);
 			Predicate predecessorRuleHead = previousRules.get(predecessor).getHead();
 			rewriteLiteralSubgoals.add(new Predicate(predecessorRuleHead));
 			projectionFields.addAll(predecessorRuleHead.getIncludedDatalogVaraibles());
@@ -462,8 +467,8 @@ public class Rule {
 		else if (isIncomingRelational)
 			rewrite.relationalType = RelationalType.INCOMING_RELATIONAL;
 		
-		//rewrite.localizePrimaryKey();
-		
+		if (rewrite.getLitertalSubgoals().size()==0) rewrite.localizePrimaryKey();
+		System.out.println(rewrite);
 		return rewrite;
 
 	}
@@ -492,7 +497,7 @@ public class Rule {
 		for (int i = topologicalOrder.indexOf(v) + 1; i < topologicalOrder.size(); i++)
 			prohibitedDatalogVariables.add(topologicalOrder.get(i));
 		Rule rewrite = new Rule();
-		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString());// + toString().hashCode());
+		Predicate<Expression> rewriteHead = new Predicate<Expression>(this.head.name + "_" + v.toString() + toString().hashCode());
 		Set<Predicate<Expression>> rewriteLiteralSubgoals = new HashSet<Predicate<Expression>>();
 		Set<Expression> rewriteConditionSubgoals = new HashSet<Expression>();
 		Set<Expression> projectionFields = new LinkedHashSet<Expression>();
@@ -955,6 +960,7 @@ public class Rule {
 					predecessorRule.setAggregate();
 					rule.getHead().getArgs().remove(lastArgumentIndex);
 					//rule.getHead().addArg(newAggregateFunction);
+					//rule.isAggregate = true;
 					rule.getHead().addArg(newAggregationVariable); //<------ Vicky change for removing first groupBy
 					rule.isAggregate = false;
 					
@@ -979,6 +985,7 @@ public class Rule {
 					
 					rule.getHead().getArgs().remove(lastArgumentIndex);
 					//rule.getHead().addArg(newAggregateFunction);
+					//rule.isAggregate = true;
 					rule.getHead().addArg(newAggregationVariable);//<------ Vicky change for removing first groupBy
 					rule.isAggregate = false;
 	
@@ -1061,6 +1068,7 @@ public class Rule {
 	
 	public boolean isRenamingRule()
 	{
+		if (relationalType != RelationalType.NOT_RELATIONAL) return false;
 		if (getConditionSubgoals().isEmpty()) {
 			if (getLitertalSubgoals().size() == 1) {
 				Predicate<Expression> rhs = getLitertalSubgoals().get(0);

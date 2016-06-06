@@ -3,6 +3,7 @@ package schema;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,6 +14,8 @@ import java.util.Set;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.HashMultimap;
 
 import algebra.RelationalType;
 import giraph.SuperVertexId;
@@ -517,7 +520,7 @@ public class Table implements Writable {
 			int iterationNumber = 1;
 			
 			//For PageRank
-			iterationNumber = (Integer)(value.toArray()[1]);
+			//iterationNumber = (Integer)(value.toArray()[1]);
 			
 			int numberOfRecievedMessages = getNumberOfMessages(key, iterationNumber - 1, messagesTable);
 			int numberOfOtherSideNeighbors = getNumberOfNeighbors(key, otherDirectionNeighborsTable);
@@ -550,14 +553,75 @@ public class Table implements Writable {
 				}
 				if (!existingPartitionWithMessages.partition.data.contains(key, value))
 					existingPartitionWithMessages.partition.data.put(key, value);
-				addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+				if (isPagerank)
+					addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+				else
+					addSingleMessage(neighborId, 0, existingPartitionWithMessages.messages);
 			}
 			//resetNumberOfMessages(key, iterationNumber, messagesTable);
 		}
 		return partitionedTableWithMessages;
 	}
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, Table sameDirectionNeighborsTable, boolean isPagerank)
+	{
+		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
+		
+		Map<Integer,Integer> numberOfMessagesMap = new HashMap<>();
+		Set<Integer> completedSenders = new HashSet<>();
+		for (Tuple messageTuple : messagesTable.data.values())
+		{
+			int[] messageTupleArray = messageTuple.toArray();
+			int sourceNodeId = (Integer)messageTupleArray[0];
+			int numberOfRecievedMessages = (Integer)messageTupleArray[2];
+			int numberOfOtherSideNeighbors = getNumberOfNeighbors(sourceNodeId, otherDirectionNeighborsTable);
+			if (numberOfRecievedMessages == numberOfOtherSideNeighbors) completedSenders.add(sourceNodeId);
+		}
+		
+		com.google.common.collect.Multimap<Integer, Integer> neighborsByReciever = HashMultimap.create();
+		for (Tuple edgeTuple : sameDirectionNeighborsTable.data.values()) {
+			int[] edgeTupleArray = edgeTuple.toArray();
+			int sourceNodeId = edgeTupleArray[0];
+			int destNodeId = edgeTupleArray[1];
+			neighborsByReciever.put(destNodeId, sourceNodeId);
+		}
+		
+		for (int recieverId : neighborsByReciever.keySet()) {
+			Collection<Integer> sendersForThisReciever = neighborsByReciever.get(recieverId);
+			if (completedSenders.containsAll(sendersForThisReciever))
+					numberOfMessagesMap.put(recieverId, sendersForThisReciever.size());
+		}
+		
+		for (Tuple value : data.values())
+		{
+			int neighborId = getKey(value);
+			if (numberOfMessagesMap.containsKey(neighborId)) {
+				int neighborsSuperVerticesKey = neighborId;
+				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
+				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+				PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
+				if (existingPartitionWithMessages == null)
+				{
+					Table partition = new Table(fieldTypes, keyFields);
+					partition.setAggregationFunctionType(aggregationFunctionType);
+					if (isRecursive) partition.setRecursive();
+					if (isSourceNodeVariableUnncessary) partition.setSourceNodeVariableUnncessary();
+					partition.setRelationalType(relationalType);
+					
+					Table neighborMessagesTable = createMessageTable();
+					
+					existingPartitionWithMessages = new PartitionWithMessages(partition, neighborMessagesTable);
+					partitionedTableWithMessages.put(neighborSuperVertexId, existingPartitionWithMessages);
+				}
+				existingPartitionWithMessages.partition.addTuple(neighborId, value);
+				addNumberOfMessages(neighborId, 0, existingPartitionWithMessages.messages, numberOfMessagesMap.get(neighborId));
+			}
+		}
+		return partitionedTableWithMessages;
+	}
+
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased2(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
 		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
 		// The line below should change if source node index changes
@@ -579,10 +643,14 @@ public class Table implements Writable {
 			int iterationNumber = 1;
 
 			//For PageRank
-			iterationNumber = (Integer)(value.toArray()[1]);
+			//iterationNumber = (Integer)(value.toArray()[1]);
 
 			int sourceNodeIdTuple = tupleArray[sourceNodeIdIndex];
-			Tuple sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], iterationNumber});
+			Tuple sourceNodeIdAndIterationNumberTuple;
+			if (isPagerank)
+				sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], iterationNumber});
+			else
+				sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], 0});
 
 			int numberOfRecievedMessages = getNumberOfMessages(sourceNodeIdTuple, iterationNumber - 1, messagesTable);
 			int numberOfOtherSideNeighbors = getNumberOfNeighbors(sourceNodeIdTuple, otherDirectionNeighborsTable);
@@ -617,7 +685,11 @@ public class Table implements Writable {
 				if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
 				existingPartitionWithMessages.partition.addTuple(destNodeIdTuple, value);
 			}
-			addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+			if (isPagerank)
+				addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+			else
+				addSingleMessage(neighborId, 0, existingPartitionWithMessages.messages);
+				
 			
 			processedSourceNodeIdAndIterationNumberTuples.add(sourceNodeIdAndIterationNumberTuple);
 		}
@@ -642,13 +714,18 @@ public class Table implements Writable {
 	
 	void addSingleMessage(int destinationVertexId, int iterationNumber, Table messagesTable)
 	{
+		addNumberOfMessages(destinationVertexId, iterationNumber, messagesTable, 1);
+	}
+	
+	void addNumberOfMessages(int destinationVertexId, int iterationNumber, Table messagesTable, int numberOfMessages)
+	{
 		int[] messagesTuple = new int[3];
 		messagesTuple[0] = destinationVertexId;
 		messagesTuple[1] = iterationNumber;
-		messagesTuple[2] = 1;
+		messagesTuple[2] = numberOfMessages;
 		messagesTable.addTuple(new Tuple(messagesTuple));		
 	}
-	
+
 	class PartitionWithMessages
 	{
 		Table partition;

@@ -52,7 +52,7 @@ public class Program {
 	    List<Rule> renamingRules = new ArrayList<>();
 	    for (Rule r : getRules())
 	    	if (r.isRenamingRule()) {
-	    		substitutionMap.put(r.head.getName(), r.getLitertalSubgoals().get(0).getName());
+	    		substitutionMap.put(r.getLitertalSubgoals().get(0).getName(), r.head.getName());
 	    		renamingRules.add(r);
 	    	}
 	    rules.removeAll(renamingRules);
