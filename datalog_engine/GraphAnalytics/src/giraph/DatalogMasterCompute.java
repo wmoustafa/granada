@@ -68,12 +68,12 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 //			System.out.println("2TOTAL number of records = " + sum_records);
 //			System.out.println("2TOTAL compute invocations = " + sum_invocations);
 			
-	
-		if (getSuperstep() > 0) {
-			if (this.<BooleanWritable>getAggregatedValue("HALT_COMPUTATION").get()){
-				haltComputation();
-			}
-		}
+			
+		//if (getSuperstep() > 0) {
+			//if (this.<BooleanWritable>getAggregatedValue("HALT_COMPUTATION").get()){
+				//haltComputation();
+			//}
+		//}
 	}
 
 	@Override

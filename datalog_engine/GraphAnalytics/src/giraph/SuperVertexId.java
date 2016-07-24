@@ -9,7 +9,7 @@ import org.apache.hadoop.io.WritableComparable;
 public class SuperVertexId implements WritableComparable<SuperVertexId> {
 	
 	int vertexId;
-	short partitionId;
+	int partitionId;
 
 	@Override
 	public int hashCode() {
@@ -31,7 +31,7 @@ public class SuperVertexId implements WritableComparable<SuperVertexId> {
 		this.partitionId = -1;
 	}
 
-	public SuperVertexId(short partitionId, int vertexId) {
+	public SuperVertexId(int partitionId, int vertexId) {
 		super();
 		this.vertexId = vertexId;
 		this.partitionId = partitionId;
@@ -41,7 +41,7 @@ public class SuperVertexId implements WritableComparable<SuperVertexId> {
 		return vertexId;
 	}
 	
-	public short getPartitionId() {
+	public int getPartitionId() {
 		return partitionId;
 	}
 		
@@ -49,13 +49,13 @@ public class SuperVertexId implements WritableComparable<SuperVertexId> {
 	public void readFields(DataInput in) throws IOException {
 		// TODO Auto-generated method stub
 		vertexId = in.readInt();
-		partitionId = in.readShort();
+		partitionId = in.readInt();
 	}
 	@Override
 	public void write(DataOutput out) throws IOException {
 		// TODO Auto-generated method stub
 		out.writeInt(vertexId);
-		out.writeShort(partitionId);
+		out.writeInt(partitionId);
 	}
 
 	@Override

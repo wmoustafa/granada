@@ -200,6 +200,27 @@ public class Database implements Writable {
 		}
 		return changedTables;
 	}
+	public Set<String> combineNoAggregation(Database otherDatabase)
+	{
+		Set<String> changedTables = new HashSet<String>();
+		for (Entry<String, Table> entry : otherDatabase.tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table otherTable = entry.getValue();
+			Table thisTable = tables.get(tableName);
+			if (thisTable != null) 
+			{
+				boolean tableChanged = thisTable.combineNoAggregation(otherTable);
+				if (tableChanged) changedTables.add(tableName);
+			}
+			else
+			{
+				tables.put(tableName, otherTable);
+				if (!otherTable.isEmpty()) changedTables.add(tableName);
+			}
+		}
+		return changedTables;
+	}
 	
 	public Set<String> combine2(Database otherDatabase)
 	{
@@ -375,10 +396,10 @@ public class Database implements Writable {
 			Map<SuperVertexId,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
 			Map<SuperVertexId,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
 			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				outgoingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
+				outgoingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
 			
 			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
-				incomingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
+				incomingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
 
 			Map<SuperVertexId,PartitionWithMessages> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);
@@ -467,8 +488,7 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table thisTable = entry.getValue();
-			if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
-			s.append(tableName + "=" + thisTable);
+				s.append(tableName + "=" + thisTable);
 		}
 		s.append("]");
 		return s.toString();

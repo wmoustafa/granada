@@ -3,16 +3,21 @@ package schema;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.HashMultimap;
 
 import algebra.RelationalType;
 import giraph.SuperVertexId;
@@ -140,12 +145,71 @@ public class Table implements Writable {
 		return addTuple(key, tuple);
 	}
 	
+	public boolean addTupleNoAggregation(Tuple tuple)
+	{
+		int key = getKey(tuple);
+		return addTupleNoAggregation(key, tuple);
+	}
+
 	public void putTuple(Tuple tuple)
 	{
 		int key = getKey(tuple);
 		data.put(key, tuple);
 	}
 	
+	public boolean addTupleNoAggregation(int key, Tuple value)
+	{
+		if (!isAggregate && data.contains(key, value)) return false; 
+		if (isAggregate)
+		{
+			int[] toBeInserted = value.toArray();
+			int aggregateArgIndex = toBeInserted.length - 1;
+			for (Tuple t : data.get(key))
+			{
+				int[] existing = t.toArray();
+				boolean equalGroup = true;
+				if (aggregateArgIndex > 1)
+					for (int i = 0; i < aggregateArgIndex; i++)
+						if (toBeInserted[i] != (existing[i]))
+						{
+							equalGroup = false;
+							break;
+						}
+				if (equalGroup)
+				{					
+					int existingValueBeforeCombining = (Integer)existing[aggregateArgIndex];
+					//IN CASE OF INCREMENTAL MAINTAINANCE:
+					if (aggregationFunctionType == AggregationFunctionType.SUM || aggregationFunctionType == AggregationFunctionType.MSUM){
+						existing[aggregateArgIndex] = toBeInserted[aggregateArgIndex];
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MIN) {
+						if (toBeInserted[aggregateArgIndex] < existing[aggregateArgIndex]) {
+							existing[aggregateArgIndex]= toBeInserted[aggregateArgIndex];
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.FSUM){
+						existing[aggregateArgIndex] = existing[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat(toBeInserted[aggregateArgIndex]) +  
+						Float.intBitsToFloat(existing[aggregateArgIndex])); 
+
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MAX || aggregationFunctionType == AggregationFunctionType.MMAX) {
+						if (toBeInserted[aggregateArgIndex] > existing[aggregateArgIndex]) {
+							existing[aggregateArgIndex]= toBeInserted[aggregateArgIndex];
+						}
+					}
+					
+					if (existing[aggregateArgIndex] == existingValueBeforeCombining) 
+						return false; 
+					else return true;
+					
+				}				
+			}
+		}
+//		System.out.println("Add tuple key = " + key + ", value = " + value);
+		data.put(key, value);
+		return true;
+	}
+
 	public boolean addTuple(int key, Tuple value)
 	{
 		if (!isAggregate && data.contains(key, value)) return false; 
@@ -168,7 +232,7 @@ public class Table implements Writable {
 				{					
 					int existingValueBeforeCombining = (Integer)existing[aggregateArgIndex];
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
-					if (aggregationFunctionType == AggregationFunctionType.SUM){
+					if (aggregationFunctionType == AggregationFunctionType.SUM || aggregationFunctionType == AggregationFunctionType.MSUM){
 						existing[aggregateArgIndex] = toBeInserted[aggregateArgIndex] + 
 						existing[aggregateArgIndex];
 					}
@@ -181,6 +245,11 @@ public class Table implements Writable {
 						existing[aggregateArgIndex] = existing[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat(toBeInserted[aggregateArgIndex]) +  
 						Float.intBitsToFloat(existing[aggregateArgIndex])); 
 
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MAX || aggregationFunctionType == AggregationFunctionType.MMAX) {
+						if (toBeInserted[aggregateArgIndex] > existing[aggregateArgIndex]) {
+							existing[aggregateArgIndex]= toBeInserted[aggregateArgIndex];
+						}
 					}
 					
 					if (existing[aggregateArgIndex] == existingValueBeforeCombining) 
@@ -222,23 +291,54 @@ public class Table implements Writable {
 							break;
 						}
 				if (equalGroup)
-				{				
+				{
+					int original_delta = 0;
 					//FOR UPDATING DELTA
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
-					if (aggregationFunctionType == AggregationFunctionType.MIN)
+					if (aggregationFunctionType == AggregationFunctionType.MIN) {
 						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() >= 
 						((Integer) baseValueAsArray[aggregateArgIndex]).intValue())
 						{
 							toBeRemoved.add(deltaValue); 
 							return false;
 						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MAX) {
+						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() <= 
+						((Integer) baseValueAsArray[aggregateArgIndex]).intValue())
+						{
+							toBeRemoved.add(deltaValue); 
+							return false;
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MMAX) {
+						original_delta = deltaValueAsArray[aggregateArgIndex];
+						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() <= 
+						((Integer) baseValueAsArray[aggregateArgIndex]).intValue())
+						{
+							toBeRemoved.add(deltaValue); 
+							return false;
+						}
+						else {
+							deltaValueAsArray[aggregateArgIndex] = 						
+							((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() -
+							((Integer) baseValueAsArray[aggregateArgIndex]).intValue();
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MSUM) {
+						original_delta = deltaValueAsArray[aggregateArgIndex];
+						deltaValueAsArray[aggregateArgIndex] = 
+						((Integer) deltaValueAsArray[aggregateArgIndex]).intValue() +
+						((Integer) baseValueAsArray[aggregateArgIndex]).intValue();
+						
+					}
 
 					int existingValueBeforeCombining = (Integer)baseValueAsArray[aggregateArgIndex];
 					//FOR UPDATING BASE
 					//IN CASE OF INCREMENTAL MAINTAINANCE:
 					if (aggregationFunctionType == AggregationFunctionType.SUM)
 						baseValueAsArray[aggregateArgIndex] = (Integer)deltaValueAsArray[aggregateArgIndex] +
-						(Integer)baseValueAsArray[aggregateArgIndex];
+						(Integer)baseValueAsArray[aggregateArgIndex];					
 					else if (aggregationFunctionType == AggregationFunctionType.MIN) {
 						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() < 
 								((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) 
@@ -248,7 +348,28 @@ public class Table implements Writable {
 					}
 					else if (aggregationFunctionType == AggregationFunctionType.FSUM)
 						baseValueAsArray[aggregateArgIndex] = Float.floatToIntBits(Float.intBitsToFloat((Integer)deltaValueAsArray[aggregateArgIndex]) + 
-						Float.intBitsToFloat((Integer)baseValueAsArray[aggregateArgIndex])); 
+						Float.intBitsToFloat((Integer)baseValueAsArray[aggregateArgIndex]));
+					else if (aggregationFunctionType == AggregationFunctionType.MAX) {
+						if (((Integer)deltaValueAsArray[aggregateArgIndex]).intValue() > 
+								((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) 
+						{
+							baseValueAsArray[aggregateArgIndex] = deltaValueAsArray[aggregateArgIndex]; 
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MMAX) {
+						if (original_delta > 
+						((Integer)baseValueAsArray[aggregateArgIndex]).intValue()) 
+						{
+							baseValueAsArray[aggregateArgIndex] = original_delta; 
+						}
+					}
+					else if (aggregationFunctionType == AggregationFunctionType.MSUM) {
+						baseValueAsArray[aggregateArgIndex] = original_delta +
+						(Integer)baseValueAsArray[aggregateArgIndex];
+					}
+
+
+
 						
 					if ((Integer)baseValueAsArray[aggregateArgIndex] == existingValueBeforeCombining) 
 						return false; 
@@ -342,13 +463,12 @@ public class Table implements Writable {
 	{
 //		System.out.println("Field types = " + fieldTypes.length);
 		//return String.valueOf(data.size());
+		List<Tuple> tuples = new ArrayList<>();
 		String[][] dataAsMatrix = new String[data.size()][1 + fieldTypes.length];
 		int i = 0;
 		for (Tuple tuple : data.values())
 		{
 			int j = 0;
-//			System.out.println("Key = " + String.valueOf(getKey(tuple)));
-//			System.out.println("Value = " + Arrays.toString(tuple.toArray()));
 			dataAsMatrix[i][j++] = String.valueOf(getKey(tuple));
 			for (Object value : tuple.toArray())
 				dataAsMatrix[i][j++] = value.toString();
@@ -357,10 +477,31 @@ public class Table implements Writable {
 		return new PrettyPrinter().toString(dataAsMatrix);
 	}
 	
+	public boolean combineNoAggregation(Table otherTable)
+	{
+		setAggregationFunctionType(otherTable.aggregationFunctionType);
+		setRelationalType(otherTable.relationalType);
+		if (otherTable.isRecursive) setRecursive();
+		if (otherTable.isSourceNodeVariableUnncessary) setSourceNodeVariableUnncessary();
+
+		boolean tableChanged = false;
+		for (Tuple tuple : otherTable.data.values())
+		{
+			////System.out.println("with tuple " + tuple);
+			boolean tupleChanged = addTupleNoAggregation(tuple);
+			if (tupleChanged) tableChanged = true;
+		}
+		return tableChanged;
+	}
+
 	public boolean combine(Table otherTable)
 	{
+		setAggregationFunctionType(otherTable.aggregationFunctionType);
+		setRelationalType(otherTable.relationalType);
+		if (otherTable.isRecursive) setRecursive();
+		if (otherTable.isSourceNodeVariableUnncessary) setSourceNodeVariableUnncessary();
+
 		boolean tableChanged = false;
-		////System.out.println("Combining isAgg:" + isAggregate + "" + this);
 		for (Tuple tuple : otherTable.data.values())
 		{
 			////System.out.println("with tuple " + tuple);
@@ -430,7 +571,7 @@ public class Table implements Writable {
 			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])), (Integer)(neighborSuperVertexArray[2]));
 			Table existingTable = partitionedTable.get(neighborSuperVertexId);
 			if (existingTable == null)
 			{
@@ -447,7 +588,7 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 	
-	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	public Map<SuperVertexId,Table> partitionEdgeBased1(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
 		// The line below should change if source node index changes
@@ -478,7 +619,7 @@ public class Table implements Writable {
 //				System.out.println("Neighbor super vertex tuple = " + neighborSuperVertexTuple);
 				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
 				neighborSuperVertexId = new SuperVertexId(
-						Integer.valueOf(neighborSuperVertexArray[1]).shortValue(), 
+						neighborSuperVertexArray[1], 
 						neighborSuperVertexArray[2]);
 				neighbors.put(neighborId, neighborSuperVertexId);
 			}
@@ -506,6 +647,33 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 
+	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	{
+		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
+		int neighborIdIndex;
+		if (isAggregate) neighborIdIndex = fieldTypes.length - 2;
+		else neighborIdIndex = fieldTypes.length - 1;
+		
+		for (Tuple value : data.values())
+		{
+			int key = getKey(value);
+			int[] tupleArray = value.toArray();
+			int neighborId = tupleArray[neighborIdIndex];
+			SuperVertexId neighborSuperVertexId= new SuperVertexId(neighborId, neighborId);
+			Table existingTable = partitionedTable.get(neighborSuperVertexId);
+			if (existingTable == null)
+			{
+				existingTable = new Table(fieldTypes, keyFields);
+				existingTable.setAggregationFunctionType(aggregationFunctionType);
+				if (isRecursive) existingTable.setRecursive();
+				if (isSourceNodeVariableUnncessary) existingTable.setSourceNodeVariableUnncessary();
+				existingTable.setRelationalType(relationalType);
+				partitionedTable.put(neighborSuperVertexId, existingTable);
+			}
+			existingTable.addTuple(key, value);
+		}
+		return partitionedTable;
+	}
 	
 	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessages(Table neighborsTable, Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
@@ -517,7 +685,7 @@ public class Table implements Writable {
 			int iterationNumber = 1;
 			
 			//For PageRank
-			iterationNumber = (Integer)(value.toArray()[1]);
+			//iterationNumber = (Integer)(value.toArray()[1]);
 			
 			int numberOfRecievedMessages = getNumberOfMessages(key, iterationNumber - 1, messagesTable);
 			int numberOfOtherSideNeighbors = getNumberOfNeighbors(key, otherDirectionNeighborsTable);
@@ -533,7 +701,7 @@ public class Table implements Writable {
 				int neighborsSuperVerticesKey = neighborId;
 				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])), (Integer)(neighborSuperVertexArray[2]));
 				PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 				if (existingPartitionWithMessages == null)
 				{
@@ -550,14 +718,75 @@ public class Table implements Writable {
 				}
 				if (!existingPartitionWithMessages.partition.data.contains(key, value))
 					existingPartitionWithMessages.partition.data.put(key, value);
-				addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+				if (isPagerank)
+					addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+				else
+					addSingleMessage(neighborId, 0, existingPartitionWithMessages.messages);
 			}
 			//resetNumberOfMessages(key, iterationNumber, messagesTable);
 		}
 		return partitionedTableWithMessages;
 	}
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, Table sameDirectionNeighborsTable, boolean isPagerank)
+	{
+		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
+		
+		Map<Integer,Integer> numberOfMessagesMap = new HashMap<>();
+		Set<Integer> completedSenders = new HashSet<>();
+		for (Tuple messageTuple : messagesTable.data.values())
+		{
+			int[] messageTupleArray = messageTuple.toArray();
+			int sourceNodeId = (Integer)messageTupleArray[0];
+			int numberOfRecievedMessages = (Integer)messageTupleArray[2];
+			int numberOfOtherSideNeighbors = getNumberOfNeighbors(sourceNodeId, otherDirectionNeighborsTable);
+			if (numberOfRecievedMessages == numberOfOtherSideNeighbors) completedSenders.add(sourceNodeId);
+		}
+		
+		com.google.common.collect.Multimap<Integer, Integer> neighborsByReciever = HashMultimap.create();
+		for (Tuple edgeTuple : sameDirectionNeighborsTable.data.values()) {
+			int[] edgeTupleArray = edgeTuple.toArray();
+			int sourceNodeId = edgeTupleArray[0];
+			int destNodeId = edgeTupleArray[1];
+			neighborsByReciever.put(destNodeId, sourceNodeId);
+		}
+		
+		for (int recieverId : neighborsByReciever.keySet()) {
+			Collection<Integer> sendersForThisReciever = neighborsByReciever.get(recieverId);
+			if (completedSenders.containsAll(sendersForThisReciever))
+					numberOfMessagesMap.put(recieverId, sendersForThisReciever.size());
+		}
+		
+		for (Tuple value : data.values())
+		{
+			int neighborId = getKey(value);
+			if (numberOfMessagesMap.containsKey(neighborId)) {
+				int neighborsSuperVerticesKey = neighborId;
+				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
+				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])), (Integer)(neighborSuperVertexArray[2]));
+				PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
+				if (existingPartitionWithMessages == null)
+				{
+					Table partition = new Table(fieldTypes, keyFields);
+					partition.setAggregationFunctionType(aggregationFunctionType);
+					if (isRecursive) partition.setRecursive();
+					if (isSourceNodeVariableUnncessary) partition.setSourceNodeVariableUnncessary();
+					partition.setRelationalType(relationalType);
+					
+					Table neighborMessagesTable = createMessageTable();
+					
+					existingPartitionWithMessages = new PartitionWithMessages(partition, neighborMessagesTable);
+					partitionedTableWithMessages.put(neighborSuperVertexId, existingPartitionWithMessages);
+				}
+				existingPartitionWithMessages.partition.addTuple(neighborId, value);
+				addNumberOfMessages(neighborId, 0, existingPartitionWithMessages.messages, numberOfMessagesMap.get(neighborId));
+			}
+		}
+		return partitionedTableWithMessages;
+	}
+
+	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased2(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
 		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
 		// The line below should change if source node index changes
@@ -579,10 +808,14 @@ public class Table implements Writable {
 			int iterationNumber = 1;
 
 			//For PageRank
-			iterationNumber = (Integer)(value.toArray()[1]);
+			//iterationNumber = (Integer)(value.toArray()[1]);
 
 			int sourceNodeIdTuple = tupleArray[sourceNodeIdIndex];
-			Tuple sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], iterationNumber});
+			Tuple sourceNodeIdAndIterationNumberTuple;
+			if (isPagerank)
+				sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], iterationNumber});
+			else
+				sourceNodeIdAndIterationNumberTuple = new Tuple(new int[]{tupleArray[sourceNodeIdIndex], 0});
 
 			int numberOfRecievedMessages = getNumberOfMessages(sourceNodeIdTuple, iterationNumber - 1, messagesTable);
 			int numberOfOtherSideNeighbors = getNumberOfNeighbors(sourceNodeIdTuple, otherDirectionNeighborsTable);
@@ -597,7 +830,7 @@ public class Table implements Writable {
 			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])), (Integer)(neighborSuperVertexArray[2]));
 			PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 			if (existingPartitionWithMessages == null)
 			{
@@ -617,7 +850,11 @@ public class Table implements Writable {
 				if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
 				existingPartitionWithMessages.partition.addTuple(destNodeIdTuple, value);
 			}
-			addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+			if (isPagerank)
+				addSingleMessage(neighborId, iterationNumber, existingPartitionWithMessages.messages);
+			else
+				addSingleMessage(neighborId, 0, existingPartitionWithMessages.messages);
+				
 			
 			processedSourceNodeIdAndIterationNumberTuples.add(sourceNodeIdAndIterationNumberTuple);
 		}
@@ -642,13 +879,18 @@ public class Table implements Writable {
 	
 	void addSingleMessage(int destinationVertexId, int iterationNumber, Table messagesTable)
 	{
+		addNumberOfMessages(destinationVertexId, iterationNumber, messagesTable, 1);
+	}
+	
+	void addNumberOfMessages(int destinationVertexId, int iterationNumber, Table messagesTable, int numberOfMessages)
+	{
 		int[] messagesTuple = new int[3];
 		messagesTuple[0] = destinationVertexId;
 		messagesTuple[1] = iterationNumber;
-		messagesTuple[2] = 1;
+		messagesTuple[2] = numberOfMessages;
 		messagesTable.addTuple(new Tuple(messagesTuple));		
 	}
-	
+
 	class PartitionWithMessages
 	{
 		Table partition;
