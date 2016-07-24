@@ -39,3 +39,4 @@ Thumbs.db
 # Bin directory *
 # ###############
 /datalog_engine/GraphAnalytics/bin
+/bin/

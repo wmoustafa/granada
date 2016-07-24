@@ -38,7 +38,7 @@ public class DatalogWorkerContext extends WorkerContext {
 			conf = getConf();
 
 			FileSystem fs = FileSystem.get(conf);
-			FSDataInputStream in = fs.open(new Path("hdfs://localhost:9000/user/hadoop/input/" + getProgramName() + ".txt"));
+			FSDataInputStream in = fs.open(new Path("hdfs://b09-26.sysnet.ucsd.edu:9000/user/hadoop/input/" + getProgramName() + ".txt"));
 
 			Parser parser = new Parser(in);
 			Program program = parser.program();
@@ -84,9 +84,12 @@ public class DatalogWorkerContext extends WorkerContext {
 	}
 	@Override
 	public void preSuperstep() {
+//		System.out.println("In preSuperstep getSupertep = " + getSuperstep());
 		if (getSuperstep() == 0)
 		{
+//			System.out.println("Superstep 0, get first rule");
 			rulesToProcess = g.getFirstToProcess();
+//			System.out.println("predicatesToProcess " + rulesToProcess);
 		}
 		else
 		{
@@ -94,17 +97,14 @@ public class DatalogWorkerContext extends WorkerContext {
 			for (Rule rule : rulesToProcess)
 				changed.put(rule.getHead().getName(), this.<BooleanWritable>getAggregatedValue(rule.getHead().getName()).get());
 
-			//System.out.println("changed" + changed);
+//			System.out.println("changed" + changed);
 			rulesToProcess = g.getNextToProcess(changed);
-			//System.out.println("predicatesToProcess " + rulesToProcess);
+//			System.out.println("predicatesToProcess " + rulesToProcess);
 		}
-		////System.out.println(this.getSuperstep());
-//		System.out.println("-----> Now going to process: " +rulesToProcess);
-		////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
 		for (Rule rule : rulesToProcess) {
-			System.out.println("Evaluating rule " + rule + " with plan ");
+//			System.out.println("Evaluating rule " + rule + " with plan ");
 			rule.generateEvaluationPlan(null,metadata);
-			rule.getEvaluationPlan().print();
+//			rule.getEvaluationPlan().print();
 		}
 		aggregate("HALT_COMPUTATION", new BooleanWritable(rulesToProcess.isEmpty()));
 		firstVertex = true;

@@ -13,11 +13,13 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 
+import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
 import utils.AggregationFunctionType;
+
 
 
 public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<SuperVertexId, Database, NullWritable>{
@@ -70,6 +72,11 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
 			Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length());
+			long vertex_number = 0;
+			long in_edges_number = 0;
+			long out_edges_number = 0;
+			long super_out_edges = 0;
+			long super_in_edges = 0;
 
 			int nEdges = 0;
 			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
@@ -79,11 +86,14 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
 				nEdges += jsonInEdgeTupleArray.length() + jsonOutEdgeTupleArray.length();
+				jsonVertexValues = null;
+				jsonInEdgeTupleArray = null;
+				jsonOutEdgeTupleArray = null;
 			}
 			
 			int[] edgeKeyFields = new int[]{0};
 			Class[] edgeFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table edgesTable = new Table(edgeFieldTypes, edgeKeyFields, nEdges);
+//			Table edgesTable = new Table(edgeFieldTypes, edgeKeyFields, nEdges);
 
 			int[] outgoingNeighborsKeyFields = new int[]{0};
 			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
@@ -91,7 +101,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 
 			int[] incomingNeighborsKeyFields = new int[]{0};
 			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table incomingNeighborsTable = new Table(incomingNeighborsFieldTypes, incomingNeighborsKeyFields, jsonSuperVertexValues.length());
+//			Table incomingNeighborsTable = new Table(incomingNeighborsFieldTypes, incomingNeighborsKeyFields, jsonSuperVertexValues.length());
 
 			int[] messagesKeyFields = new int[]{0};
 			Class[] messagesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
@@ -116,10 +126,8 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
 				int[] vertexTuple = new int[jsonVertexTuple.length()];
-//				System.out.println("Size of vertex tuple = " + jsonVertexTuple.length());
 				for (int j = 0; j < jsonVertexTuple.length(); j++)
 				{
-//					System.out.println("vertexTuple["+j+"] =" + jsonVertexTuple.getInt(j));
 					if (vertexFieldTypes[j] == String.class) 
 						throw new RuntimeException("String: Unsupported data type");
 					else if (vertexFieldTypes[j] == Integer.class) 
@@ -128,27 +136,30 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
 				vertexTable.putTuple(new Tuple(vertexTuple));
+				vertex_number++;
 
 				int[] messagesTuple = new int[3];
 				messagesTuple[0] = jsonVertexTuple.getInt(0);
 				messagesTuple[1] = 0;
 				messagesTuple[2] = 0;
 				messagesTable.putTuple(new Tuple(messagesTuple));
-				for (int j = 0; j < jsonInEdgeTupleArray.length(); j++)
-				{
-					int[] edgeTuple = new int[3];
-					edgeTuple[1] = jsonVertexTuple.getInt(0);
-					JSONArray edgeEndVertexAndWeight = jsonInEdgeTupleArray.getJSONArray(j);
-					edgeTuple[0] = edgeEndVertexAndWeight.getInt(0);
-					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					edgesTable.putTuple(new Tuple(edgeTuple));
-
-					int[] neighborTuple = new int[3];
-					neighborTuple[0] = jsonVertexTuple.getInt(0);
-					neighborTuple[1] = edgeEndVertexAndWeight.getInt(0);
-					neighborTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					incomingNeighborsTable.putTuple(new Tuple(neighborTuple));
-				}
+//				for (int j = 0; j < jsonInEdgeTupleArray.length(); j++)
+//				{
+//					int[] edgeTuple = new int[3];
+//					edgeTuple[1] = jsonVertexTuple.getInt(0);
+//					JSONArray edgeEndVertexAndWeight = jsonInEdgeTupleArray.getJSONArray(j);
+//					edgeTuple[0] = edgeEndVertexAndWeight.getInt(0);
+//					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
+////					edgesTable.putTuple(new Tuple(edgeTuple));
+//					in_edges_number++;
+//
+//					int[] neighborTuple = new int[3];
+//					neighborTuple[0] = jsonVertexTuple.getInt(0);
+//					neighborTuple[1] = edgeEndVertexAndWeight.getInt(0);
+//					neighborTuple[2] = edgeEndVertexAndWeight.getInt(1);
+//					incomingNeighborsTable.putTuple(new Tuple(neighborTuple));
+//					edgeEndVertexAndWeight = null;					
+//				}
 
 				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
 				{
@@ -157,9 +168,16 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					JSONArray edgeEndVertexAndWeight = jsonOutEdgeTupleArray.getJSONArray(j);
 					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					edgesTable.putTuple(new Tuple(edgeTuple));
+//					edgesTable.putTuple(new Tuple(edgeTuple));
+					out_edges_number++;
+					
 					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
+					edgeEndVertexAndWeight = null;
 				}
+				jsonVertexValues = null;
+				jsonVertexTuple = null;
+				jsonInEdgeTupleArray = null;
+				jsonOutEdgeTupleArray = null;
 			}
 			long t2 = System.currentTimeMillis();
 			////System.out.println(t2-t1);
@@ -174,6 +192,8 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
 				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
+				jsonNeighborSuperVertexTuple = null;
+				super_out_edges++;
 			}
 			long t4 = System.currentTimeMillis();
 			////System.out.println(t4-t2);
@@ -186,14 +206,49 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 //			System.out.println("Metadata after reading input " + metadata);
 			
 			Database database = new Database(metadata,-1);
+//			StringBuffer sb = new StringBuffer();
+//			sb.append("[Empty database object = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("vertices", vertexTable);
-//			System.out.println("Vertices table = " + vertexTable);
-			database.addDataTable("edges", edgesTable);
-//			System.out.println("Edges table: " + edgesTable);
-			database.addDataTable("incomingNeighbors", incomingNeighborsTable);
+//			sb.append("[Size of vertices = " + MemoryMeasurer.measureBytes(vertexTable) + "]");
+//			sb.append("[database after vertices = " + MemoryMeasurer.measureBytes(database) + "].");
+//			database.addDataTable("edges", edgesTable); //TODO Vicky checking if can be removed
+//			sb.append("[database after edges = " + MemoryMeasurer.measureBytes(database) + "].");
+//			database.addDataTable("incomingNeighbors", incomingNeighborsTable); //TODO Vicky checking if can be removed
+//			sb.append("[database after in neigh = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
+//			sb.append("[database after out neigh = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
+//			sb.append("[database after neighbor super = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("messages_full", messagesTable);
+//			sb.append("[database after msg table = " + MemoryMeasurer.measureBytes(database) + "].");
+			
+			//*************************************************************************
+			// Vicky memory measuring
+			//Create empty dummy table
+
+			
+			
+//			sb.append("***************************************** \n");		
+//			sb.append("[Total size of supervertex = " + MemoryMeasurer.measureBytes(database) + "].");
+//			sb.append("[Number of vertices = " + vertex_number+ "].");
+//			sb.append("[Size of vertices = " + MemoryMeasurer.measureBytes(vertexTable) + "]");
+//			sb.append("[Number of in edges = " + in_edges_number + "].");
+//			sb.append("[Number of out edges = " + out_edges_number + "].");
+//			sb.append("[Size of edges = " + MemoryMeasurer.measureBytes(edgesTable) + "]");
+//			sb.append("[Number of super out edges = " + super_out_edges + "].");
+//			sb.append("[Size of super edges = " + MemoryMeasurer.measureBytes(neighborSuperVerticesTable) + "]");
+//			sb.append("[Size of super in edges = " + MemoryMeasurer.measureBytes(incomingNeighborsTable) + "]");
+//			sb.append("[Size of super out edges = " + MemoryMeasurer.measureBytes(outgoingNeighborsTable) + "]");
+//			sb.append("[Size of messages_full = " + MemoryMeasurer.measureBytes(messagesTable) + "]");
+//			sb.append("[Size of metadata = " + MemoryMeasurer.measureBytes(metadata) + "]");
+//			sb.append("\n***************************************** \n");	
+//			System.out.println(sb.toString());
+			//*************************************************************************
+			
+			//Vicky Set all json arrays to null
+			jsonSuperVertexValues = null;
+			jsonNeighborSuperVertices = null;
+			
 			return database;
 		}
 

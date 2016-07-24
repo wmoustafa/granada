@@ -68,7 +68,7 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 //			System.out.println("2TOTAL number of records = " + sum_records);
 //			System.out.println("2TOTAL compute invocations = " + sum_invocations);
 			
-			
+	
 		if (getSuperstep() > 0) {
 			if (this.<BooleanWritable>getAggregatedValue("HALT_COMPUTATION").get()){
 				haltComputation();
@@ -83,7 +83,7 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 			conf = getConf();
 
 			FileSystem fs = FileSystem.get(conf);
-			FSDataInputStream in = fs.open(new Path("hdfs://localhost:9000/user/hadoop/input/" + getProgramName() + ".txt"));
+			FSDataInputStream in = fs.open(new Path("hdfs://b09-26.sysnet.ucsd.edu:9000/user/hadoop/input/" + getProgramName() + ".txt"));
 
 			Parser parser = new Parser(in);
 			Program program = parser.program();
@@ -98,6 +98,8 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 				registerAggregator(aggregator, BooleanOrAggregator.class);
 				aggregators.add(aggregator);
 			}
+			System.out.println("Use semi-join = " + useSemiJoin() + ", use EagerAggregation = " + useEagerAggregation());
+			
 			registerAggregator("HALT_COMPUTATION", BooleanAndAggregator.class);
 //			registerAggregator("SEND_MSG", LongSumAggregator.class);
 //			registerAggregator("SEND_RECORDS", LongSumAggregator.class);

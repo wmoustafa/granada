@@ -4,14 +4,12 @@ import java.util.Set;
 
 import org.apache.giraph.aggregators.BooleanAndAggregator;
 import org.apache.giraph.aggregators.BooleanOrAggregator;
-import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.LongWritable;
 
 import algebra.Program;
 import algebra.Rule;
@@ -83,7 +81,7 @@ public class DatalogMasterCompute extends DefaultMasterCompute {
 			conf = getConf();
 
 			FileSystem fs = FileSystem.get(conf);
-			FSDataInputStream in = fs.open(new Path("hdfs://localhost:9000/user/hadoop/input/" + getProgramName() + ".txt"));
+			FSDataInputStream in = fs.open(new Path("hdfs://b09-26.sysnet.ucsd.edu:9000/user/hadoop/input/" + getProgramName() + ".txt"));
 
 			Parser parser = new Parser(in);
 			Program program = parser.program();

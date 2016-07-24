@@ -95,6 +95,7 @@ public class HashJoinFilter extends Filter {
 						if (nextFilter!=null) nextFilter.next();
 				}
 				//Log.DEBUG(numberOfJoiningTuples+","+m+","+(float)numberOfJoiningTuples/m);
+				matchingTuples = null;
 			}
 		}		
 	}

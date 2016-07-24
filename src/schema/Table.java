@@ -447,7 +447,9 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 	
-	public Map<SuperVertexId,Table> partitionEdgeBased(Table neighborsSuperVerticesTable, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	public Map<SuperVertexId,Table> partitionEdgeBased(
+			Table neighborsSuperVerticesTable,
+			Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
 		// The line below should change if source node index changes

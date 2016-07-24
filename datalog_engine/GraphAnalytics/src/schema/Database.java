@@ -30,6 +30,7 @@ public class Database implements Writable {
 	private int size = 0;
 	private Metadata metadata;
 	private int superstep = 0;
+	private long  message_array_length = 0;
 	
 	public Database()
 	{
@@ -71,6 +72,15 @@ public class Database implements Writable {
 			if (!(table.getRelationalType() == RelationalType.NOT_RELATIONAL) && !tableName.endsWith("_full"))
 				tablesIterator.remove();
 		}
+	}
+	
+	public Table getTableByInexactName(String filter){
+		for(String name: tables.keySet()){
+			if(name.contains(filter)){
+				return tables.get(name);
+			}
+		}
+		return null;
 	}
 	
 	public boolean exists(String name)
@@ -115,6 +125,8 @@ public class Database implements Writable {
 				out.writeUTF(tableName);
 			table.write(out);
 		}
+		
+//		System.out.println("ByteArray lenght: " +((UnsafeByteArrayOutputStream)out).toByteArray().length);
 	}
 
 	public void readFieldsC(DataInput in) throws IOException {

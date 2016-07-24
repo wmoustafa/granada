@@ -34,15 +34,8 @@ public abstract class Filter {
 	public void setNextFilter(Filter f)
 	{
 		nextFilter = f;
-		//nextFilter.inputDatabase = inputDatabase;
-		//nextFilter.outputDatabase = outputDatabase;
 	}
-	
-	//public void setDatabases(Database inputDatabase, Database outputDatabase)
-	//{
-		//this.inputDatabase = inputDatabase;
-		//this.outputDatabase = outputDatabase;
-	//}
+
 		
 	public Filter getNextFilter()
 	{
@@ -70,6 +63,7 @@ public abstract class Filter {
 		close();
 //		System.out.println("Evaluate plan:");
 //		print();
+		
 		return outputDatabase;
 		
 	}

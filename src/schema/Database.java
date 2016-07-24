@@ -21,6 +21,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
+import objectexplorer.MemoryMeasurer;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
 
@@ -85,6 +86,18 @@ public class Database implements Writable {
 		for (int i=0; i<numberOfOutputFields; i++)
 			types[i] = outputFields.get(i).getType(this);
 		return types;
+	}
+	
+	public String printTableSizes(){
+		StringBuffer sb = new StringBuffer();
+		for (Iterator<Entry<String,Table>> tablesIterator = tables.entrySet().iterator(); tablesIterator.hasNext();)
+		{
+			Entry<String,Table> t = tablesIterator.next();
+			String tableName = t.getKey();
+			Table table = t.getValue();
+			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
+		}
+		return(sb.toString());
 	}
 
 	public void readFields(DataInput in) throws IOException {
@@ -320,6 +333,41 @@ public class Database implements Writable {
 	}
 
 	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	{
+		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		Database relationalDatabase = getRelationalDatabase();
+		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table table = entry.getValue();
+			
+			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
+			
+			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), neighbors);
+			
+			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
+			{
+				SuperVertexId superVertexId = partitionEntry.getKey();
+				Table tablePartition = partitionEntry.getValue();
+				Database existingDatabase = partitionedDatabase.get(superVertexId);
+				if (existingDatabase == null) 
+				{
+					existingDatabase = new Database();
+					partitionedDatabase.put(superVertexId, existingDatabase);
+				}
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: tableName = " + tableName);
+//				System.out.println("getDatabasesForEverySuperVertexEdgeBased: table = " + tablePartition);
+				tablePartition.setName(tableName);
+				existingDatabase.addDataTable(tableName, tablePartition);
+			}
+		}
+		return partitionedDatabase;
+	}
+	
+	//TODO Vicky to be used only for the case where |V| = |SV|
+	public Map<SuperVertexId,Database> getDatabasesForEveryVertex(
+			Database inputDatabase, 
+			Int2ObjectOpenHashMap<SuperVertexId> neighbors)
 	{
 		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();

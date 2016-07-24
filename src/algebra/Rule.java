@@ -24,8 +24,6 @@ import evaluation.PossibleOrder;
 import evaluation.PossibleOrderSpace;
 import parser.DatalogVariable;
 import parser.Expression;
-import parser.IntegerConst;
-import parser.Operation;
 import parser.UserDefinedFunction;
 import query.filter.Filter;
 import schema.Database;
@@ -468,7 +466,7 @@ public class Rule {
 			rewrite.relationalType = RelationalType.INCOMING_RELATIONAL;
 		
 		if (rewrite.getLitertalSubgoals().size()==0) rewrite.localizePrimaryKey();
-		System.out.println(rewrite);
+//		System.out.println(rewrite);
 		return rewrite;
 
 	}
@@ -1032,7 +1030,7 @@ public class Rule {
 			for (Predicate p : getLitertalSubgoals())
 				if (p.getIncludedDatalogVaraibles().contains(v)) { found = true; break; }
 			if (!found) return false;
-			System.out.println("FOUND: " + v);
+//			System.out.println("FOUND: " + v);
 		}
 		return true;
 	}
@@ -1047,7 +1045,7 @@ public class Rule {
 			for (Expression e : litearalSubgoal.getArgs())
 				existingVariables.addAll(e.getIncludedDatalogVariables());
 		
-		System.out.println("existingVariables "+existingVariables);
+//		System.out.println("existingVariables "+existingVariables);
 		
 		DatalogVariable randomVariable = null;
 		Random r = new Random();

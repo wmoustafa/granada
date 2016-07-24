@@ -79,6 +79,10 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
 				nEdges += jsonInEdgeTupleArray.length() + jsonOutEdgeTupleArray.length();
+				
+				jsonVertexValues = null;
+				jsonInEdgeTupleArray = null;
+				jsonOutEdgeTupleArray = null;
 			}
 			
 			int[] edgeKeyFields = new int[]{0};
@@ -127,13 +131,13 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					else if (vertexFieldTypes[j] == Boolean.class) 
 						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
-				vertexTable.putTuple(new Tuple(vertexTuple));
+				vertexTable.addTuple(new Tuple(vertexTuple));
 
 				int[] messagesTuple = new int[3];
 				messagesTuple[0] = jsonVertexTuple.getInt(0);
 				messagesTuple[1] = 0;
 				messagesTuple[2] = 0;
-				messagesTable.putTuple(new Tuple(messagesTuple));
+				messagesTable.addTuple(new Tuple(messagesTuple));
 				for (int j = 0; j < jsonInEdgeTupleArray.length(); j++)
 				{
 					int[] edgeTuple = new int[3];
@@ -141,13 +145,14 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					JSONArray edgeEndVertexAndWeight = jsonInEdgeTupleArray.getJSONArray(j);
 					edgeTuple[0] = edgeEndVertexAndWeight.getInt(0);
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					edgesTable.putTuple(new Tuple(edgeTuple));
+					edgesTable.addTuple(new Tuple(edgeTuple));
 
 					int[] neighborTuple = new int[3];
 					neighborTuple[0] = jsonVertexTuple.getInt(0);
 					neighborTuple[1] = edgeEndVertexAndWeight.getInt(0);
 					neighborTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					incomingNeighborsTable.putTuple(new Tuple(neighborTuple));
+					incomingNeighborsTable.addTuple(new Tuple(neighborTuple));
+					edgeEndVertexAndWeight = null;
 				}
 
 				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
@@ -157,9 +162,14 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					JSONArray edgeEndVertexAndWeight = jsonOutEdgeTupleArray.getJSONArray(j);
 					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
-					edgesTable.putTuple(new Tuple(edgeTuple));
-					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
+					edgesTable.addTuple(new Tuple(edgeTuple));
+					outgoingNeighborsTable.addTuple(new Tuple(edgeTuple));
+					edgeEndVertexAndWeight = null;
 				}
+				jsonVertexValues = null;
+				jsonVertexTuple = null;
+				jsonInEdgeTupleArray = null;
+				jsonOutEdgeTupleArray = null;
 			}
 			long t2 = System.currentTimeMillis();
 			////System.out.println(t2-t1);
@@ -173,7 +183,8 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
-				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
+				neighborSuperVerticesTable.addTuple(new Tuple(neighborSuperVertexTuple));
+				jsonNeighborSuperVertexTuple = null;
 			}
 			long t4 = System.currentTimeMillis();
 			////System.out.println(t4-t2);
@@ -194,6 +205,11 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
 			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
 			database.addDataTable("messages_full", messagesTable);
+			
+			jsonVertex = null;
+			jsonNeighborSuperVertices = null;
+			jsonSuperVertexValues = null;
+			
 			return database;
 		}
 

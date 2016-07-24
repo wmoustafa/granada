@@ -28,7 +28,7 @@ public class DatalogVertexOutputFormat extends TextVertexOutputFormat<SuperVerte
 	     
 	        str.append(vertex.getId().toString());
 	        str.append(" ");
-	        str.append(vertex.getValue().getDataTableByName("wcc_full").toString());
+	        str.append(vertex.getValue().getTableByInexactName("OUTGOING_full").toString());
 //	        str.append(vertex.getValue().toString());
 	        
 	      return new Text(str.toString());
