@@ -1,6 +1,11 @@
 package io;
 
+import it.unimi.dsi.fastutil.ints.Int2ByteMap;
+import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -28,7 +33,7 @@ public class SnapToPartitionedGiraph1 {
 	static final String OUTPUT_FILE = "/home/dm/walaa/graph_files/smallworld100.dag.txt.hdfs";
 	static final String TMP_DIR = "/home/dm/walaa/graph_files/tmp/metis";*/
     
-        static String SNAP_FILENAME = "/home/dm/walaa/research/snap/examples/graphgen/smallworld.txt";
+        static String SNAP_FILENAME = "";
 	static int NUMBER_OF_NODES = 50000000;
 	static int NUM_LEVEL1_PARTITIONS = 69;
 	static double SAMPLE_RATE = 1;
@@ -39,9 +44,10 @@ public class SnapToPartitionedGiraph1 {
     static String EDGE_WEIGHTS = "unit";
     static boolean USE_METIS = true;
     
-	static String OUTPUT_FILE = "/home/dm/walaa/graph_files/smallworld50m.69workers.txt.hdfs";
-	static final String TMP_DIR = "/home/dm/walaa/graph_files/tmp/metis";
-    
+	static String OUTPUT_FILE = "";
+	static String OUTPUT_FILE_NO_EXT, CSV_FILE;
+//	static final String TMP_DIR = "/home/dm/walaa/datasets/tmp/metis";
+    static final String TMP_DIR = "/vicky/tmp";
 
 	public static void main(String[] args) throws Exception
 	{
@@ -60,14 +66,27 @@ public class SnapToPartitionedGiraph1 {
 	    String inputFilename = new File(SNAP_FILENAME).getName();
 	    if(inputFilename.contains(".")) inputFilename = inputFilename.substring(0, inputFilename.lastIndexOf('.'));
 	    
-	    OUTPUT_FILE = "/home/dm/walaa/graph_files/" + inputFilename + "." + NUM_LEVEL1_PARTITIONS + "." + NUM_LEVEL2_PARTITIONS
-		+ "." + NUM_LEVEL3_PARTITIONS + "." + EDGE_WEIGHTS + "." + NUMBER_OF_LABELS + (DAG? ".dag" : ".cyc") + (USE_METIS? ".metis" : ".range") +  ".txt.hdfs"; 
+
+            //VP Simplify file names since only the first partition defines the number of super-vertices
+
+	    OUTPUT_FILE_NO_EXT = "/vicky/outputs/" + inputFilename + "." + NUM_LEVEL1_PARTITIONS;
+
+//	    OUTPUT_FILE_NO_EXT = "home/vpapavas/giraph_paper/granada/benchmarks/datasets/" + inputFilename + "." + NUM_LEVEL1_PARTITIONS + "." + NUM_LEVEL2_PARTITIONS
+//		+ "." + NUM_LEVEL3_PARTITIONS + "." + EDGE_WEIGHTS + "." + NUMBER_OF_LABELS + (DAG? ".dag" : ".cyc") + (USE_METIS? ".metis" : ".range"); 
+
+//	    OUTPUT_FILE_NO_EXT = "/home/dm/walaa/graph_files/" + inputFilename + "." + NUM_LEVEL1_PARTITIONS + "." + NUM_LEVEL2_PARTITIONS
+//                + "." + NUM_LEVEL3_PARTITIONS + "." + EDGE_WEIGHTS + "." + NUMBER_OF_LABELS + (DAG? ".dag" : ".cyc") + (USE_METIS? ".metis" : ".range");
+
+//	    OUTPUT_FILE = OUTPUT_FILE_NO_EXT + ".txt.hdfs"; 
+	    OUTPUT_FILE = OUTPUT_FILE_NO_EXT + ".datalog.txt"; 
+	    CSV_FILE = OUTPUT_FILE_NO_EXT + ".csv"; 
 		File tmpDir = new File(TMP_DIR, UUID.randomUUID().toString());
 		tmpDir.mkdirs();
 
 		int[][] threeLevelPartitioning = new int[NUMBER_OF_NODES][3];
 
-		int[] level1VertexPartitions = getNodePartitions(graph, NUM_LEVEL1_PARTITIONS);
+		System.out.println("Graph size = " + graph.length);
+		int[] level1VertexPartitions = getNodePartitions(graph, NUM_LEVEL1_PARTITIONS,tmpDir);
 		int[][][] level1Graphs = getGraphPartitions(graph, level1VertexPartitions, NUM_LEVEL1_PARTITIONS);
 
 		assignThreeLevelPartitioning(graph, level1VertexPartitions, threeLevelPartitioning, 0);
@@ -87,7 +106,7 @@ public class SnapToPartitionedGiraph1 {
 			}
 		}
 		int[][][][] verticesInEachPartition = getVerticesInEachPartition(graph, threeLevelPartitioning, NUM_LEVEL1_PARTITIONS, NUM_LEVEL2_PARTITIONS, NUM_LEVEL3_PARTITIONS);
-		writeHdfsFile(graph, OUTPUT_FILE, NUMBER_OF_LABELS, NUMBER_OF_NODES, verticesInEachPartition, threeLevelPartitioning, NUM_LEVEL1_PARTITIONS, NUM_LEVEL2_PARTITIONS, NUM_LEVEL3_PARTITIONS);
+		writeHdfsFile(graph, OUTPUT_FILE, CSV_FILE, NUMBER_OF_LABELS, NUMBER_OF_NODES, verticesInEachPartition, threeLevelPartitioning, NUM_LEVEL1_PARTITIONS, NUM_LEVEL2_PARTITIONS, NUM_LEVEL3_PARTITIONS);
 
 	}
 	static int[][] sequentialize(int[][] graph)
@@ -100,7 +119,7 @@ public class SnapToPartitionedGiraph1 {
 			if (graph[i]!=null) sequentialIds[graph[i][0]] = sequentialId++;
 
 		int[][] outputGraph = new int[sequentialId][];
-		//System.out.println(outputGraph.length);
+		System.out.println(outputGraph.length);
 		for (int i = 0; i < numberOfNodes; i++)
 		{
 			if (graph[i]!=null)
@@ -111,7 +130,7 @@ public class SnapToPartitionedGiraph1 {
 					outputGraph[sequentialIds[i]][j] = sequentialIds[graph[i][j]];
 			}
 		}
-		//System.out.println("Sequentialized the graph");
+		System.out.println("Sequentialized the graph");
 		return outputGraph;		
 	}
 	
@@ -142,7 +161,7 @@ public class SnapToPartitionedGiraph1 {
 		return vericesInEachPartition;
 	}
 
-	static void writeHdfsFile(int[][] graph, String outputFile, int numberOfLabels, int numberOfNodes, int[][][][] verticesInEachPartition, int[][] threeLevelPartitioning, int numLevel1Partitioning, int numLevel2Partitioning, int numLevel3Partitioning) throws Exception
+	static void writeHdfsFile(int[][] graph, String outputFile, String csvFile, int numberOfLabels, int numberOfNodes, int[][][][] verticesInEachPartition, int[][] threeLevelPartitioning, int numLevel1Partitioning, int numLevel2Partitioning, int numLevel3Partitioning) throws Exception
 	{
 		double zipfDistributionDenominator = 0;
 		for (int k = 1; k <= numberOfLabels; k++) zipfDistributionDenominator += 1.0 / k;
@@ -157,7 +176,9 @@ public class SnapToPartitionedGiraph1 {
 		zipfDistribution_edges[0] = 0;
 		for (int k = 1; k <= MAX_EDGE_WEIGHT; k++) zipfDistribution_edges[k] = zipfDistribution_edges[k - 1] + (1.0 / k) / zipfDistributionDenominator_edges;
 
-		PrintWriter out = new PrintWriter(outputFile);
+		PrintWriter giraphOut = new PrintWriter(outputFile);
+		PrintWriter csvOut = new PrintWriter(csvFile);
+		Int2ByteMap[] edgeWeights = new Int2ByteMap[graph.length];
 		for (int i = 0; i < numLevel1Partitioning; i++)
 			for (int j = 0; j < numLevel2Partitioning; j++)
 				for (int k = 0; k < numLevel3Partitioning; k++)
@@ -182,10 +203,17 @@ public class SnapToPartitionedGiraph1 {
 							int neighborId = graph[n][e];
 							int[] neighborIdAndWeight = new int[2];
 							neighborIdAndWeight[0] = neighborId;
-							if (EDGE_WEIGHTS.equals("unit")) neighborIdAndWeight[1] = 1;
-							if (EDGE_WEIGHTS.equals("uniform")) neighborIdAndWeight[1] = 1 + r.nextInt(100);
-							if (EDGE_WEIGHTS.equals("skewed_low")) neighborIdAndWeight[1] = -1 * Arrays.binarySearch(zipfDistribution_edges, Math.random()) - 1;
-							if (EDGE_WEIGHTS.equals("skewed_high")) neighborIdAndWeight[1] = 101 - (-1 * Arrays.binarySearch(zipfDistribution_edges, Math.random()) - 1);
+							
+							if (edgeWeights[n] == null || edgeWeights[n].get(neighborId) == 0)
+							{
+								if (EDGE_WEIGHTS.equals("unit")) neighborIdAndWeight[1] = 1;
+								if (EDGE_WEIGHTS.equals("uniform")) neighborIdAndWeight[1] = 1 + r.nextInt(100);
+								if (EDGE_WEIGHTS.equals("skewed_low")) neighborIdAndWeight[1] = -1 * Arrays.binarySearch(zipfDistribution_edges, Math.random()) - 1;
+								if (EDGE_WEIGHTS.equals("skewed_high")) neighborIdAndWeight[1] = 101 - (-1 * Arrays.binarySearch(zipfDistribution_edges, Math.random()) - 1);
+								if (edgeWeights[neighborId] == null) edgeWeights[neighborId] = new Int2ByteOpenHashMap();
+								edgeWeights[neighborId].put(n, (byte)neighborIdAndWeight[1]);
+							}
+							else neighborIdAndWeight[1] = edgeWeights[n].get(neighborId);
 							
 							if (DAG || ((n ^ neighborId) & 0x01) == 1)
 							
@@ -214,9 +242,13 @@ public class SnapToPartitionedGiraph1 {
 					
 						Object[] vertexArray = new Object[3];
 						vertexArray[0] = vertexData;
-						vertexArray[1] = outEdges.toArray();
-						vertexArray[2] = inEdges.toArray();
+						vertexArray[1] = inEdges.toArray();
+						vertexArray[2] = outEdges.toArray();
 						
+						csvOut.print("vertex\t" + n + "\t" + labelNumber + "\t");
+						for (int[] outEdge : outEdges)
+							csvOut.print("edge\t" + n + "\t" + outEdge[0] + "\t" + outEdge[1] + "\t");
+						csvOut.println();
 						superVertexData[c++] = vertexArray;
 					}
 					
@@ -228,12 +260,22 @@ public class SnapToPartitionedGiraph1 {
 						//superVertexNeighborsArray[e++] = level3Neighbor.toArray();
 					//superVertexArray[2] = superVertexNeighborsArray;
 					superVertexArray[3] = superNeighborsDetails;
-					////System.out.println(new Gson().toJson(superVertexArray));
-					out.println(new Gson().toJson(superVertexArray));
+					//System.out.println(new Gson().toJson(superVertexArray));
+					try {
+						giraphOut.println(new Gson().toJson(superVertexArray));
+					}catch(java.lang.OutOfMemoryError exc){
+						System.out.println("SuperVertexArray Size= " + c);
+						System.out.println("SuperVertexArray[0] = " +
+							superVertexArray[0]);
+						System.out.println("SuperVertexArray[1][1] (inEdges) " +
+							"= " +superVertexArray[0]);
+					}
 				}
 
-		out.flush();
-		out.close();		
+		giraphOut.flush();
+		giraphOut.close();	
+		csvOut.flush();
+		csvOut.close();
 	}
 
 	static void assignThreeLevelPartitioning(int[][] graph, int[] partitions, int[][] threeLevelPartitioning, int level)
@@ -251,6 +293,8 @@ public class SnapToPartitionedGiraph1 {
 	{
 		if (!USE_METIS) return getNodePartitions(graph, numberOfPartitions);
 		int numberOfNodes = graph.length;
+		//System.out.println("Number of nodes in getNodePartitions = " + numberOfNodes);
+		
 		if (numberOfNodes == 0) return new int[0];
 		int maxNodeValue = graph[numberOfNodes - 1][0];
 
@@ -281,12 +325,19 @@ public class SnapToPartitionedGiraph1 {
 		//ProcessBuilder b3 = new ProcessBuilder("/usr/local/bin/gpmetis", absoluteOutputFilename, String.valueOf(numberOfPartitions));
 		
 		//parmetis ~/research/snap/examples/graphgen/smallworld.txt.metis.orig 1 200 0.5 0.5 7 7
+		try{
 		ProcessBuilder b3 = new ProcessBuilder("/usr/local/bin/parmetis", absoluteOutputFilename, "1", String.valueOf(numberOfPartitions), "0.5", "0.5", "7", "7");
-		Process p3 = b3.start();
+		b3.redirectErrorStream(true); 
+		Process p3 = b3.inheritIO().start();
 		p3.waitFor();
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
 
 		String metisPartitionsFile = absoluteOutputFilename + ".part";
-		////System.out.println(metisPartitionsFile);
+		//System.out.println(metisPartitionsFile);
+
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(metisPartitionsFile)));
 		String line3;
 		int[] nodePartitions = new int[numberOfNodes];
@@ -325,7 +376,7 @@ public class SnapToPartitionedGiraph1 {
 
 		int[] nodePartitions = new int[numberOfNodes];
 		for (int n = 0; n < numberOfNodes; n++)
-			nodePartitions[n] = n%numberOfPartitions;
+			nodePartitions[n] = n % numberOfPartitions;
 		/*for (int n = 0; n < numberOfNodes; n++)
 		{
 			int smallestPartition = smallestPartitions.poll();
@@ -334,10 +385,10 @@ public class SnapToPartitionedGiraph1 {
 			smallestPartitions.add(smallestPartition);
 		}*/
 		for (int i = 0; i < nodePartitions.length; i++)
-			//partitionSizes[nodePartitions[i]] += (graph[i].length - 1);
-			partitionSizes[nodePartitions[i]] ++;
+			partitionSizes[nodePartitions[i]] += (graph[i].length - 1);
+			//partitionSizes[nodePartitions[i]] ++;
 		Arrays.sort(partitionSizes);
-		////System.out.println(Arrays.toString(partitionSizes));
+		//System.out.println(Arrays.toString(partitionSizes));
 		return nodePartitions;	
 	}
 
@@ -354,7 +405,7 @@ public class SnapToPartitionedGiraph1 {
 
 		FileInputStream fis = new FileInputStream(file);
 		
-		//System.out.println("Read entire file into memory");
+		System.out.println("Read entire file into memory");
 		String line;
 		BufferedReader br = new BufferedReader(new InputStreamReader(fis), Integer.MAX_VALUE / 2);
 		Random r = new Random();
@@ -367,7 +418,7 @@ public class SnapToPartitionedGiraph1 {
 				if (r.nextDouble() < SAMPLE_RATE)
 				{
 					sampled[counter] = true;
-					String[] split = line.split("\t");
+					String[] split = line.split("\\s");
 					int from = Integer.parseInt(split[0]);
 					int to = Integer.parseInt(split[1]);
 					numberOfNieghbors[from]++;
@@ -379,18 +430,18 @@ public class SnapToPartitionedGiraph1 {
 		}
 		br.close();
 		fis.close();
-		//System.out.println("Sampled " + nEdges + " edges.");
+		System.out.println("Sampled " + nEdges + " edges.");
 
 		for (int i = 0; i < numberOfNodes; i++)
 		{	
 			int numNeighbors_i = numberOfNieghbors[i];
 			if (numNeighbors_i != 0) graph[i] = new int[numNeighbors_i + 1];
 		}
-		//System.out.println("Created graph array");
+		System.out.println("Created graph array");
 		int[] currentIndex = new int[numberOfNodes];
 		fis = new FileInputStream(file);
 
-		//System.out.println("Read entire file into memory");
+		System.out.println("Read entire file into memory");
 		br = new BufferedReader(new InputStreamReader(fis), Integer.MAX_VALUE / 2);
 		counter = 0;
 		while ((line = br.readLine()) != null)
@@ -399,7 +450,7 @@ public class SnapToPartitionedGiraph1 {
 			{
 				if (sampled[counter])
 				{
-					String[] split = line.split("\t");
+					String[] split = line.split("\\s");
 					int from = Integer.parseInt(split[0]);
 					int to = Integer.parseInt(split[1]);
 					graph[from][0] = from;
@@ -414,7 +465,7 @@ public class SnapToPartitionedGiraph1 {
 		}
 		br.close();
 		fis.close();
-		//System.out.println("Extracted graph info");
+		System.out.println("Extracted graph info");
 
 		return graph;
 	}
@@ -422,6 +473,8 @@ public class SnapToPartitionedGiraph1 {
 	static int[][][] getGraphPartitions(int[][] graph, int[] vertexPartitions, int numberOfPartitions)
 	{
 		int numberOfNodes = graph.length;
+		//System.out.println(numberOfNodes);
+		//System.out.println(Arrays.toString(vertexPartitions));
 		//if (numberOfNodes == 0) return new int[0][0][0];
 		int maxNodeId = graph[numberOfNodes - 1][0];
 		int[] vertexPartitionMap = new int[maxNodeId + 1];

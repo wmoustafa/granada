@@ -77,25 +77,37 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			
 			Set<String> changedTables = new HashSet<>();
 
+			//seminaive
+			//Set<String> changed = inputDatabase.refresh(messagesDb);
 			Set<String> changed = inputDatabase.refresh(messagesDb);
+			if (changed.isEmpty() && getSuperstep() > 0) { vertex.voteToHalt(); vertex.setValue(inputDatabase); return;}
 //			aggregate("REFRESH_DB", new LongWritable(end-start));
 			
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			for (Rule rule : rulesToProcess)
 			{
 //				start = System.currentTimeMillis();
-//				System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
+				//System.out.println("Evaluating " + rule +" with INPUT DATABASE: " + inputDatabase);
 //				System.out.println("Evaluating " + rule );
 				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
+				if (wc.getProgramName().equals("page_rank")) {
+					//inputDatabase.removeDataTable(rule.getHead().getName());
+					//inputDatabase.removeDataTable(rule.getHead().getName() + "_full");
+				}
 //				rule.getEvaluationPlan().print();
-//				System.out.println("Output:" + outputDatabase);
+				//System.out.println("Output:" + outputDatabase);
 //				end = System.currentTimeMillis();
 //				aggregate("EVALUATE_RULE", new LongWritable(end-start));
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
-					inputDatabase.refresh(outputDatabase);
-//					System.out.println("Refresh input with output: " + inputDatabase);
+					//seminaive
+					//inputDatabase.refresh(outputDatabase);
+					changed = inputDatabase.refresh(outputDatabase);
+					//System.out.println("CHANGED = " + changed);
+					//changedTables.addAll(changed);
+					if (changed.isEmpty()) { vertex.voteToHalt(); vertex.setValue(inputDatabase); return;}
+					//System.out.println("Refresh input with output: " + inputDatabase);
 //					aggregate("REFRESH_OUTPUT", new LongWritable(end-start));
 				}
 				else
@@ -105,7 +117,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					changed = relationalDatabase.combine2(outputDatabase);
 					changedTables.addAll(changed);
 //					aggregate("COMBINE_OUTPUT", new LongWritable(end-start));
-//					System.out.println("After combine: relational database: " + relationalDatabase);
+					//System.out.println("After combine: relational database: " + relationalDatabase);
 				}
 			}
 //			System.out.println("CHANGED:" + changedTables);
@@ -149,7 +161,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			
 
 			vertex.setValue(inputDatabase);
-			vertex.voteToHalt();
+			//vertex.voteToHalt();
 //			total_end = System.currentTimeMillis();
 //			aggregate("COMPUTE_TIME", new LongWritable(total_end-total_start));
 //		}

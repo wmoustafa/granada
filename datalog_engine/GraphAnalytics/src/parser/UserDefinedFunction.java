@@ -81,13 +81,13 @@ public class UserDefinedFunction extends Expression {
 
 	@Override
 	public Class getType(Database database) {
-		if (name.equalsIgnoreCase("Count") || name.equalsIgnoreCase("Sum")) return Integer.class;
+		if (name.equalsIgnoreCase("Count") || name.equalsIgnoreCase("Sum") || name.equalsIgnoreCase("MSum")) return Integer.class;
 		return function.getReturnType();
 	}
 
 	@Override
 	public Class getType(Metadata metadata) {
-		if (name.equalsIgnoreCase("Count") || name.equalsIgnoreCase("Sum")) return Integer.class;
+		if (name.equalsIgnoreCase("Count") || name.equalsIgnoreCase("Sum") || name.equalsIgnoreCase("MSum")) return Integer.class;
 		return function.getReturnType();
 	}
 
@@ -107,7 +107,8 @@ public class UserDefinedFunction extends Expression {
 	public boolean isAggregateFunction()
 	{
 		return name.equalsIgnoreCase("COUNT")
-		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("FSUM")  | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX");
+		| name.equalsIgnoreCase("SUM") | name.equalsIgnoreCase("FSUM")  | name.equalsIgnoreCase("MIN") | name.equalsIgnoreCase("MAX")
+		| name.equalsIgnoreCase("MSUM")  | name.equalsIgnoreCase("MMAX") ;
 	}
 	
 	public String getName()

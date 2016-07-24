@@ -959,10 +959,10 @@ public class Rule {
 					UserDefinedFunction newAggregateFunction = new UserDefinedFunction(newAggregateFunctionName, newAggregateFunctionArgs);
 					predecessorRule.setAggregate();
 					rule.getHead().getArgs().remove(lastArgumentIndex);
-					//rule.getHead().addArg(newAggregateFunction);
-					//rule.isAggregate = true;
-					rule.getHead().addArg(newAggregationVariable); //<------ Vicky change for removing first groupBy
-					rule.isAggregate = false;
+					rule.getHead().addArg(newAggregateFunction);
+					rule.isAggregate = true;
+					//rule.getHead().addArg(newAggregationVariable); //<------ Vicky change for removing first groupBy
+					//rule.isAggregate = false;
 					
 				}
 				if (primaryKeyIsDisjointFromAggregationColumn)
@@ -984,10 +984,10 @@ public class Rule {
 					predecessorRule.setAggregate();
 					
 					rule.getHead().getArgs().remove(lastArgumentIndex);
-					//rule.getHead().addArg(newAggregateFunction);
-					//rule.isAggregate = true;
-					rule.getHead().addArg(newAggregationVariable);//<------ Vicky change for removing first groupBy
-					rule.isAggregate = false;
+					rule.getHead().addArg(newAggregateFunction);
+					rule.isAggregate = true;
+					//rule.getHead().addArg(newAggregationVariable);//<------ Vicky change for removing first groupBy
+					//rule.isAggregate = false;
 	
 				}
 				predecessorRuleHead.setKeyFields(new int[]{predecessorRuleHead.getArgs().size() - 2});				//predecessorRuleHead.getArgs().remove(0);

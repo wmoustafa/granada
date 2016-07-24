@@ -188,6 +188,27 @@ public class Database implements Writable {
 		}
 		return changedTables;
 	}
+	public Set<String> combineNoAggregation(Database otherDatabase)
+	{
+		Set<String> changedTables = new HashSet<String>();
+		for (Entry<String, Table> entry : otherDatabase.tables.entrySet())
+		{
+			String tableName = entry.getKey();
+			Table otherTable = entry.getValue();
+			Table thisTable = tables.get(tableName);
+			if (thisTable != null) 
+			{
+				boolean tableChanged = thisTable.combineNoAggregation(otherTable);
+				if (tableChanged) changedTables.add(tableName);
+			}
+			else
+			{
+				tables.put(tableName, otherTable);
+				if (!otherTable.isEmpty()) changedTables.add(tableName);
+			}
+		}
+		return changedTables;
+	}
 	
 	public Set<String> combine2(Database otherDatabase)
 	{
@@ -455,8 +476,7 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table thisTable = entry.getValue();
-			if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
-			s.append(tableName + "=" + thisTable);
+				s.append(tableName + "=" + thisTable);
 		}
 		s.append("]");
 		return s.toString();
