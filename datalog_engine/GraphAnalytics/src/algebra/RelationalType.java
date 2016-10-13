@@ -1,8 +1,0 @@
-package algebra;
-
-public enum RelationalType {
-	NOT_RELATIONAL,
-	OUTGOING_RELATIONAL,
-	INCOMING_RELATIONAL,
-	TWO_WAY_RELATIONAL
-}

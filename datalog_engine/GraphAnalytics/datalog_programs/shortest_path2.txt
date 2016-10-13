@@ -1,3 +1,0 @@
-path(#X,X,0):-vertices(X,_,_),X==66;
-path(#X,Z,D+E):-edges(X,Y,E), shortest_path(Y,Z,D);
-shortest_path(#X,Y,MIN(D)):-path(X,Y,D);

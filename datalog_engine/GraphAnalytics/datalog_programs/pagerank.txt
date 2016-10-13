@@ -1,3 +1,0 @@
-pagerank(#X,0,1065353216):-vertices(X,_);
-pagerank(#X,I+1,FSUM(P/D)):-edges(Y,X,W),pagerank(Y,I,P),vertices(Y,D),I<10;
-
