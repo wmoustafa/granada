@@ -254,6 +254,14 @@ public class Database implements Writable {
 		}
 	}
 
+	/**
+	 * Combine the vertex data tables with the tables in the messages, i.e combine
+	 * the current state of the database with the newly computed tuples received from
+	 * neighbors. This is part of the semi-naive evaluation. I think the full table contains
+	 * only the new tuples and evaluation should happen on this?
+	 * @param delta
+	 * @return
+	 */
 	public Set<String> refresh(Database delta)
 	{
 		Set<String> changedTables = new HashSet<String>();
