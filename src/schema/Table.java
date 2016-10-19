@@ -36,7 +36,7 @@ public class Table implements Writable {
 	private String name;
 	private Class[] fieldTypes;
 	private int[] keyFields;
-	private Multimap<Integer, Tuple> data;
+	private Multimap data;
 	private int size=0;
 	private boolean isAggregate;
 	private RelationalType relationalType = RelationalType.NOT_RELATIONAL;
@@ -319,7 +319,7 @@ public class Table implements Writable {
 		return data.size();
 	}
 	
-	public Multimap<Integer, Tuple> getData()
+	public Multimap getData()
 	{
 		return data;
 	}
@@ -754,7 +754,7 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				keyFields[i] = in.readInt();
 	
 			size = in.readInt();
-			data = new Multimap<>();
+			data = new Multimap();
 			int index = isSourceNodeVariableUnncessary? 1:0;
 			for (int k = 0; k < size; k++)
 			{

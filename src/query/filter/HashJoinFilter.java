@@ -14,7 +14,7 @@ import schema.Tuple;
 public class HashJoinFilter extends Filter {
 
 	boolean buildRightHashTable;
-	Multimap<Integer,Tuple> rightBuild;
+	Multimap rightBuild;
 	Expression[] lhsExpressions, rhsExpressions;
 	TableAlias rhsTableAlias;
 	
@@ -52,6 +52,7 @@ public class HashJoinFilter extends Filter {
 			if (buildRightHashTable && rhsExpressions.length != 0)
 			{
 //				System.out.println("Creating hash index for Join");
+				System.out.println("WTF");
 				results = rhsDataTable.getData().values().iterator();		
 				Cursor rhsCursor = new Cursor(rhsTableAlias.sequenceNumber + 1);
 				rightBuild = new Multimap(); 
@@ -60,6 +61,7 @@ public class HashJoinFilter extends Filter {
 					Tuple currentTuple = results.next();
 					rhsCursor.setCurrentTuple(rhsTableAlias, currentTuple.toArray());
 					int v = rhsCursor.evaluate(rhsExpressions).toArray()[0];
+//					Metadata.tuple_counter++;
 					rightBuild.put(v, currentTuple);
 				}
 			}

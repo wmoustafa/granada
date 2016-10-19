@@ -46,6 +46,7 @@ public class Cursor {
 //			System.out.println("Expression = " + e.toString());
 			values[i++] = e.evaluate(this);
 		}
+//		System.out.println("Join creates new tuple");
 		return new Tuple(values);
 	}
 		

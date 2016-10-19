@@ -1,9 +1,13 @@
 package query.filter;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 import evaluation.TableAlias;
 import maputil.Multimap;
+import objectexplorer.MemoryMeasurer;
+import objectexplorer.ObjectGraphMeasurer;
+import objectexplorer.ObjectGraphMeasurer.Footprint;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
@@ -34,13 +38,15 @@ public class ScanFilter extends Filter {
 			nextFilter.setInputCursor(cursor);
 			nextFilter.open(inputDatabase, outputDatabase, metadata);
 		}
+//		System.out.println("[Size of evaluation plan after open = "
+//				+ MemoryMeasurer.measureBytes(this) + "].");		
 	}
 
 	public void next()
 	{
 		if (inputTable != null)
 		{
-			Multimap<Integer, Tuple> inputTableData = inputTable.getData();
+			Multimap inputTableData = inputTable.getData();
 			for (Tuple currentTuple : inputTableData.values())
 			{
 				cursor.setCurrentTuple(inputTableAlias, currentTuple.toArray());
@@ -50,10 +56,14 @@ public class ScanFilter extends Filter {
 				if (isConditionTrue)
 					if (nextFilter!=null) nextFilter.next();
 			}
+
 		}
 	}
 
 	public void close() {
+//		System.out.println("[Size of evaluation plan before close = "
+//				+ MemoryMeasurer.measureBytes(this) + "].");
+	
 		if (inputTable != null)
 			if (nextFilter != null)
 				nextFilter.close();

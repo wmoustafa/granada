@@ -9,6 +9,10 @@ import utils.AggregationFunctionType;
 
 public class Metadata {
 	
+	public static int tuple_counter = 0;
+	public static int table_counter = 0;
+	
+	
 //	public HashBiMap<String, Integer> name_to_id = HashBiMap.create();
 	
 	class TableMetadata

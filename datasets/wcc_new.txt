@@ -1,2 +1,2 @@
-wcc(#X,MIN(Y)):-edges(Y,X,Z);
+wcc(#X,X):-vertices(X,Y,Z);
 wcc(#X,MIN(L)):-edges(Y,X,Z),wcc(Y,L);

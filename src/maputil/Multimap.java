@@ -6,8 +6,9 @@ import java.util.Map.Entry;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
+import schema.Tuple;
 
-public class Multimap<Integer,Tuple> {
+public class Multimap {
 	
 //	ModifiedJavaHashmap<K,LinkedList<V>> map;
 	LinkedList<Tuple> emptyValue = new LinkedList<>();
@@ -64,6 +65,22 @@ public class Multimap<Integer,Tuple> {
 	{
 		return size;
 	}
+	
+	/**
+	 * This method is expensive as it traverses through the map and adds the sizes of each LinkedList.
+	 * @return The size of the map including the sizes of the LinkedList per bucket of the map.
+	 */
+	public int getSizeRecursively()
+	{
+		int size = 0;
+		for(Integer key: map.keySet())
+		{
+			size+=map.get(key).size();
+		}
+		return size;
+	}
+	
+	
 	public ObjectSet<Entry<java.lang.Integer, LinkedList<Tuple>>> entries() {
 		return map.entrySet();
 	}

@@ -22,6 +22,7 @@ import evaluation.Optimizer;
 import evaluation.PlanGenerator;
 import evaluation.PossibleOrder;
 import evaluation.PossibleOrderSpace;
+import objectexplorer.MemoryMeasurer;
 import parser.DatalogVariable;
 import parser.Expression;
 import parser.UserDefinedFunction;
@@ -165,6 +166,8 @@ public class Rule {
 	
 	public Filter getEvaluationPlan()
 	{
+//		System.out.println("[Size of evaluation plan before duplicate = " + 
+//			MemoryMeasurer.measureBytes(evaluationPlan) + "].");
 		return evaluationPlan;
 	}
 

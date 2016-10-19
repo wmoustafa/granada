@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import algebra.RelationalType;
+import objectexplorer.MemoryMeasurer;
+import objectexplorer.ObjectGraphMeasurer;
+import objectexplorer.ObjectGraphMeasurer.Footprint;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
@@ -63,6 +66,7 @@ public class GroupByFilter extends Filter {
 		if (!outputDatabase.exists(outputTableName))
 		{
 			outputTable = new Table(types, keyFields);
+			Metadata.table_counter++;
 			outputDatabase.addDataTable(outputTableName, outputTable);
 		}
 		else
@@ -71,6 +75,7 @@ public class GroupByFilter extends Filter {
 		if (isRecursive) outputTable.setRecursive();
 		if (isSourceNodeVariableUnncessary) outputTable.setSourceNodeVariableUnncessary();
 		outputTable.setRelationalType(relationalType);
+		Metadata.tuple_counter = 0;
 	}
 
 	@Override
@@ -80,17 +85,22 @@ public class GroupByFilter extends Filter {
 		for (int i = 0; i < groupByFields.length; i++) {
 			outputTuple[i]=(Integer)groupByFields[i].evaluate(cursor);
 		}
-		outputTuple[groupByFields.length]=currentValue;			
-		outputTable.addTuple(new Tuple(outputTuple));
-//		System.out.println("GroupBy currentValue = " + currentValue);
+		outputTuple[groupByFields.length]=currentValue;		
+		outputTable.addTuple(new Tuple(outputTuple));		
+		Metadata.tuple_counter++;
 	}
 	
 	public void close()
 	{
-		//Log.DEBUG("***************************************************");
-			//Log.DEBUG(this);
+		System.out.println("[Size of GroupBy before close = "
+				+ MemoryMeasurer.measureBytes(this) + "].");
+		Footprint footprint = ObjectGraphMeasurer.measure(this);
+		System.out.println("GroupBy = " +footprint);
+		System.out.println("GroupBy size of output table = " + outputTable.getData().getSizeRecursively());
 		if (nextFilter!=null) nextFilter.close();
 	}
+	
+	
 	public String toString()
 	{
 		StringBuffer s = new StringBuffer("GROUP BY FILTER\n");

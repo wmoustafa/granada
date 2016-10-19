@@ -6,7 +6,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.giraph.aggregators.BooleanOrAggregator;
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -45,49 +43,72 @@ public class RunLocallyMain {
 	
 	public static void main(String args[]) throws IOException, InterruptedException, JSONException, ParseException
 	{
-		String input_file = new String(path+"small_20.1.datalog.txt"); //FIXME 
+		String input_file = new String(path+"snap_powerlaw_1000.10.datalog.txt"); //FIXME 
 		String dl_program = new String(path+"wcc_new.txt"); //FIXME
 		program_name = "wcc";
-		
+		System.out.println("Used memory before loading graph: " + usedMemory());
 		loadGraph(input_file, input_graph);
-		preComputation(dl_program);
 		
-		for(int superstep=0; superstep<30; superstep++)
+		System.out.println("Used memory after loading graph: " + usedMemory());
+		preComputation(dl_program);
+		System.out.println("Used memory after rewritting query: " + usedMemory());
+		
+		for(int superstep=0; superstep<1; superstep++)
 		{
-			System.out.println("Now at superstep " + superstep);
+			System.out.println("############################--> Now at superstep " + superstep);
 			preSuperstep(superstep);
 			for(SuperVertexId id: input_graph.keySet())
 			{
 				//Evaluate rule per super-vertex
-				compute(input_graph.get(id), send_messages.get(id));
+				System.out.println("------> Now at super-vertex " + id);
+				compute(id, input_graph.get(id), send_messages.get(id));
+				break;
 			}
+			System.out.println("Used memory after superstep" + superstep + " = " + usedMemory());
+			Metadata.tuple_counter = 0;
 		}
 		
 	}
 	
-	
-	private static void compute(Database inputDatabase, List<Database> messages)
+	private static long usedMemory()
 	{
+		return (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+	}
+	
+	private static void compute(SuperVertexId id, Database inputDatabase, List<Database> messages)
+	{
+		
+		//Memory measurer
+		int databaseCounter = 0;
+		int tableCounter = 0;
+		int tupleCounter = 0;
+		StringBuilder sb = new StringBuilder();
+		
 		Int2ObjectOpenHashMap<SuperVertexId> neighbors = new Int2ObjectOpenHashMap<SuperVertexId>();
-		//System.out.println("Vertex value = " + vertex.getValue());
 		Database relationalDatabase = new Database();
-
-		//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
+		databaseCounter++;
 		Database messagesDb = new Database();
+		databaseCounter++;
 		
 		if(messages != null){
 			for (Database message : messages){
 				messagesDb.combine2(message);				
 			}			
 		}
-		//System.out.println("Message database after combining=" + messagesDb);
-		//assert(!messagesDb.isEmpty());		
+//		sb.append("[Size of incoming messages  = " + MemoryMeasurer.measureBytes(messages) + "].");
+//		sb.append("[Size of messagesDB after combine = " + MemoryMeasurer.measureBytes(messagesDb) + "].");
+		
+		//clear messages 
+		send_messages.remove(id);
+				
 		Set<String> changedTables = new HashSet<>();
 		Set<String> changed = inputDatabase.refresh(messagesDb);
+//		sb.append("[Size of input database = " + MemoryMeasurer.measureBytes(inputDatabase) + "].");
 		
 		for (Rule rule : rulesToProcess)
 		{
 			Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
+//			sb.append("[Size of outputDatabase = " + MemoryMeasurer.measureBytes(outputDatabase) + "].");
 			
 			//TODO for PageRank improvement to remove intermediate results
 			if (program_name.equals("page_rank")) {   
@@ -106,7 +127,7 @@ public class RunLocallyMain {
 				changedTables.addAll(changed);
 			}
 		}
-
+//		sb.append("[Size of relationalDatabase = " + MemoryMeasurer.measureBytes(relationalDatabase) + "].");
 		
 		for (String table : changedTables)
 			changed_aggregate.put(table, new Boolean(true));
@@ -117,19 +138,20 @@ public class RunLocallyMain {
 	
 				superVertexIdToDatabase = relationalDatabase.
 				getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors);
-			
+//				sb.append("[Size of superVertexIdToDatabase = " + MemoryMeasurer.measureBytes(superVertexIdToDatabase) + "].");
 			for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
 			{
 				SuperVertexId neighborId = entry.getKey();
 				Database neighborDb = entry.getValue();
 				if(!send_messages.containsKey(neighborId))
 				{
-					send_messages.put(neighborId, new ArrayList<Database>());
+//					send_messages.put(neighborId, new ArrayList<Database>());
 				}
-				send_messages.get(neighborId).add(neighborDb);
+//				send_messages.get(neighborId).add(neighborDb);
 			}
 		}
-		
+//		System.out.println(sb.toString());
+		System.out.println("New tuple objects created: " + Metadata.tuple_counter);
 	}
 	
 	
@@ -150,10 +172,10 @@ public class RunLocallyMain {
 			rulesToProcess = g.getNextToProcess(changed_aggregate);
 //			System.out.println("predicatesToProcess " + rulesToProcess);
 		}
-		System.out.println("-----> Now going to process: " +rulesToProcess);
+//		System.out.println("Now going to process: " +rulesToProcess);
 		////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
 		for (Rule rule : rulesToProcess) {
-			System.out.println("Evaluating rule " + rule + " with plan ");
+//			System.out.println("Evaluating rule " + rule + " with plan ");
 			rule.generateEvaluationPlan(null,metadata);
 			rule.getEvaluationPlan().print();
 		}
@@ -316,22 +338,18 @@ public class RunLocallyMain {
 //			System.out.println("Metadata after reading input " + metadata);
 			
 			Database database = new Database(metadata,-1);
-//			StringBuffer sb = new StringBuffer();
-//			sb.append("[Empty database object = " + MemoryMeasurer.measureBytes(database) + "].");
+			StringBuffer sb = new StringBuffer();
+			
 			database.addDataTable("vertices", vertexTable);
 //			sb.append("[Size of vertices = " + MemoryMeasurer.measureBytes(vertexTable) + "]");
-//			sb.append("[database after vertices = " + MemoryMeasurer.measureBytes(database) + "].");
-//			database.addDataTable("edges", edgesTable); //TODO Vicky checking if can be removed
-//			sb.append("[database after edges = " + MemoryMeasurer.measureBytes(database) + "].");
-//			database.addDataTable("incomingNeighbors", incomingNeighborsTable); //TODO Vicky checking if can be removed
-//			sb.append("[database after in neigh = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
-//			sb.append("[database after out neigh = " + MemoryMeasurer.measureBytes(database) + "].");
+//			sb.append("[Size of outgoingNeighbors = " + MemoryMeasurer.measureBytes(outgoingNeighborsTable) + "].");
 			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
-//			sb.append("[database after neighbor super = " + MemoryMeasurer.measureBytes(database) + "].");
+//			sb.append("[Size of neighborSuperVertices = " + MemoryMeasurer.measureBytes(neighborSuperVerticesTable) + "].");
 			database.addDataTable("messages_full", messagesTable);
-//			sb.append("[database after msg table = " + MemoryMeasurer.measureBytes(database) + "].");
-
+//			sb.append("[Size of msg table = " + MemoryMeasurer.measureBytes(messagesTable) + "].");
+//			sb.append("[Size of graph database  = " + MemoryMeasurer.measureBytes(database) + "].");
+//			System.out.println(sb.toString());
 			return database;
 	}
 }
