@@ -39,14 +39,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 	public void compute(
 			Vertex<SuperVertexId, Database, NullWritable> vertex,
 			Iterable<Database> messages) throws IOException {
-//			StringBuffer sb = null;
-//			if(vertex.getId().getVertexId() > 0 && vertex.getId().getVertexId() < 10  ){
-//				sb = new StringBuffer();
-//				sb.append("***************************************** \n");
-//				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n");	
-//				sb.append("[BEFORE Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. ");
-//				sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
-//			}
+			StringBuffer sb = null;
 			DatalogWorkerContext wc = getWorkerContext();
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
@@ -56,35 +49,39 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			
 			
 			Database inputDatabase = vertex.getValue();
-			//System.out.println("Vertex value = " + vertex.getValue());
+			if(vertex.getId().getVertexId() == 0  ){
+				sb = new StringBuffer();
+				sb.append("***************************************** \n");
+				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n\n");				
+				sb.append("[Size of input database = " + MemoryMeasurer.measureBytes(inputDatabase) + "].\n");
+				Footprint footprint = ObjectGraphMeasurer.measure(inputDatabase);
+				sb.append("InputDatabase = " +footprint + "\n");
+				//FIXME seems to be wrong
+				//sb.append("[Size of incoming messages  = " + MemoryMeasurer.measureBytes(messages) + "].\n");
+			}
 			Database relationalDatabase = new Database();
 
-			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis
+			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis, apply aggregation on tuples with the same key
 			Database messagesDb = new Database();
 			
 			for (Database message : messages){
 				messagesDb.combine2(message);				
 			}
-//			if(vertex.getId().getVertexId() == 0){
-//			sb.append("[Message db size= " + MemoryMeasurer.measureBytes(messagesDb) + "]");
-//			}
-			//System.out.println("Message database after combining=" + messagesDb);
+			if(vertex.getId().getVertexId() == 0){
+				sb.append("[Size of messagesDB after combine = " + MemoryMeasurer.measureBytes(messagesDb) + "]. \n");
+			}
 			assert(!messagesDb.isEmpty());
-			
-			//the following line is important. in case there were no messages, this has to be cleaned manually
-			//, or other wise it will end up with messages from the past.
-			//in case of sum aggregate, those messages will keep increasing the value of the things they join with
-			//inputDatabase.removeRelationalDeltaTables(); 
-//			aggregate("REMOVE_TABLES", new LongWritable(end-start));
-			
+					
 			Set<String> changedTables = new HashSet<>();
-
-			Set<String> changed = inputDatabase.refresh(messagesDb);
-			
+			Set<String> changed = inputDatabase.refresh(messagesDb); //<-------------------- refresh
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
+			
 			for (Rule rule : rulesToProcess)
 			{
 				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
+				if(vertex.getId().getVertexId() == 0){
+					sb.append("[Size of outputDatabase = " + MemoryMeasurer.measureBytes(outputDatabase) +" ] \n");
+				}
 				
 				//TODO for PageRank improvement to remove intermediate results
 				if (wc.getProgramName().equals("page_rank")) {   
@@ -92,9 +89,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					inputDatabase.removeDataTable(rule.getHead().getName() + "_full");
 				}
 				
-//				if(vertex.getId().getVertexId() == 0){
-//				sb.append("[Output db size= " + MemoryMeasurer.measureBytes(outputDatabase) + "]");
-//				}
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
@@ -106,9 +100,12 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					changedTables.addAll(changed);
 				}
 			}
-//			if(vertex.getId().getVertexId() == 0){
-//			sb.append("[Relational db size= " + MemoryMeasurer.measureBytes(relationalDatabase) + "]");
-//			}
+			if(vertex.getId().getVertexId() == 0){
+				sb.append("[Size of inputDatabase after plan evaluation = " + MemoryMeasurer.measureBytes(inputDatabase) + "].\n");
+				Footprint footprint = ObjectGraphMeasurer.measure(inputDatabase);
+				sb.append("InputDatabase = " +footprint + "\n");
+				sb.append("[Size of relationalDatabase = " +  MemoryMeasurer.measureBytes(relationalDatabase) + "].\n");
+			}
 			
 			for (String table : changedTables)
 				aggregate(table, new BooleanWritable(true));
@@ -128,9 +125,10 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 				else if (useSemiAsync && useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
-//				if(vertex.getId().getVertexId() == 0){
-//				sb.append("Map supervertex to message = " + MemoryMeasurer.measureBytes(superVertexIdToDatabase) + "]");
-//				}
+				if(vertex.getId().getVertexId() == 0){
+					sb.append("Map supervertex to message = " + MemoryMeasurer.measureBytes(superVertexIdToDatabase) + "] \n");
+				}
+				
 				for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
 				{
 					SuperVertexId neighborId = entry.getKey();
@@ -139,11 +137,10 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					sendMessage(neighborId, neighborDb);
 				}
 			}
-//			if(vertex.getId().getVertexId() == 0){
-//			sb.append("[AFTER Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. ");
-//			sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
-//			System.out.println(sb.toString());
-//			}
+			if(vertex.getId().getVertexId() == 0){
+				sb.append("[AFTER Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. \n");
+				System.out.println(sb.toString());
+			}
 			
 			vertex.setValue(inputDatabase);
 			vertex.voteToHalt();

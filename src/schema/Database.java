@@ -95,7 +95,7 @@ public class Database implements Writable {
 			Entry<String,Table> t = tablesIterator.next();
 			String tableName = t.getKey();
 			Table table = t.getValue();
-			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
+//			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
 		}
 		return(sb.toString());
 	}

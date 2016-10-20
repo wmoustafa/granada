@@ -92,11 +92,11 @@ public class GroupByFilter extends Filter {
 	
 	public void close()
 	{
-		System.out.println("[Size of GroupBy before close = "
-				+ MemoryMeasurer.measureBytes(this) + "].");
-		Footprint footprint = ObjectGraphMeasurer.measure(this);
-		System.out.println("GroupBy = " +footprint);
-		System.out.println("GroupBy size of output table = " + outputTable.getData().getSizeRecursively());
+//		System.out.println("[Size of GroupBy before close = "
+//				+ MemoryMeasurer.measureBytes(this) + "].");
+//		Footprint footprint = ObjectGraphMeasurer.measure(this);
+//		System.out.println("GroupBy = " +footprint);
+//		System.out.println("GroupBy tuples in output table = " + outputTable.getData().getSizeRecursively());
 		if (nextFilter!=null) nextFilter.close();
 	}
 	
