@@ -21,7 +21,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
-import objectexplorer.MemoryMeasurer;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
 
@@ -95,7 +94,6 @@ public class Database implements Writable {
 			Entry<String,Table> t = tablesIterator.next();
 			String tableName = t.getKey();
 			Table table = t.getValue();
-//			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
 		}
 		return(sb.toString());
 	}

@@ -1,4 +1,6 @@
 package giraph;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,13 +45,15 @@ public class DatalogWorkerContext extends WorkerContext {
 			Parser parser = new Parser(in);
 			Program program = parser.program();
 
-			System.out.println("Program = " + getProgramName());
+//			System.out.println("Program = " + getProgramName());
 			rewrittenProgram = program.rewrite(useSemiJoin(), useEagerAggregation());
-			
 			g = new DatalogDependencyGraph(rewrittenProgram);
 			g.setRecursivePredicatesForRules();
 			
-			System.out.println("Semi-join=" + useSemiJoin() + ", Eager aggregation = " + useEagerAggregation());
+			Date date = new Date();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+			String formattedDate = sdf.format(date);
+			System.out.println(formattedDate + "Rewrite query \n.");
 			
 			metadata = new Metadata();
 			int[] vertexKeyFields = new int[]{0};
@@ -109,6 +113,10 @@ public class DatalogWorkerContext extends WorkerContext {
 		aggregate("HALT_COMPUTATION", new BooleanWritable(rulesToProcess.isEmpty()));
 		firstVertex = true;
 		
+		Date date = new Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+		String formattedDate = sdf.format(date);
+		System.out.println(formattedDate + " Before superstep " + getSuperstep() + "\n");
 	}	
 
 	@Override

@@ -51,7 +51,7 @@ public class RunLocallyMain {
 		String dl_program = new String(path+"wcc_new.txt"); //FIXME
 		program_name = "wcc";
 		loadGraph(input_file, input_graph);
-//		System.out.println("[Size of total graph  = " + MemoryMeasurer.measureBytes(input_graph) + "].");
+		System.out.println("[Size of total graph  = " + MemoryMeasurer.measureBytes(input_graph) + "].");
 		preComputation(dl_program);
 		
 		for(int superstep=0; superstep<10; superstep++)
@@ -354,6 +354,7 @@ public class RunLocallyMain {
 //			sb.append("[Size of neighborSuperVertices = " + MemoryMeasurer.measureBytes(neighborSuperVerticesTable) + "].");
 //			database.addDataTable("messages_full", messagesTable);
 //			sb.append("[Size of msg table = " + MemoryMeasurer.measureBytes(messagesTable) + "].");
+			
 //			sb.append("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
 //			System.out.println(sb.toString());
 			return database;

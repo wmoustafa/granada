@@ -3,9 +3,6 @@ package query.filter;
 import java.util.Arrays;
 
 import algebra.RelationalType;
-import objectexplorer.MemoryMeasurer;
-import objectexplorer.ObjectGraphMeasurer;
-import objectexplorer.ObjectGraphMeasurer.Footprint;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;
@@ -74,11 +71,6 @@ public class ProjectFilter extends Filter {
 
 	public void close()
 	{
-//		System.out.println("[Size of Project before close = "
-//				+ MemoryMeasurer.measureBytes(this) + "].");
-//		Footprint footprint = ObjectGraphMeasurer.measure(this);
-//		System.out.println("Project = " +footprint);
-//		System.out.println("Project tuples in outputTable  = " + outputTable.getData().getSizeRecursively());
 	}
 
 	public String toString()

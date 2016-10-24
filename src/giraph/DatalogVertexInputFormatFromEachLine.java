@@ -1,6 +1,9 @@
 package giraph;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.giraph.edge.Edge;
@@ -13,12 +16,10 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
-import utils.AggregationFunctionType;
 
 
 
@@ -72,11 +73,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
 			Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length());
-			long vertex_number = 0;
-			long in_edges_number = 0;
-			long out_edges_number = 0;
-			long super_out_edges = 0;
-			long super_in_edges = 0;
 
 			int nEdges = 0;
 			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
@@ -136,7 +132,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
 				vertexTable.putTuple(new Tuple(vertexTuple));
-				vertex_number++;
 
 //				int[] messagesTuple = new int[3];
 //				messagesTuple[0] = jsonVertexTuple.getInt(0);
@@ -169,7 +164,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
 //					edgesTable.putTuple(new Tuple(edgeTuple));
-					out_edges_number++;
 					
 					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
 					edgeEndVertexAndWeight = null;
@@ -179,9 +173,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				jsonInEdgeTupleArray = null;
 				jsonOutEdgeTupleArray = null;
 			}
-			long t2 = System.currentTimeMillis();
-			////System.out.println(t2-t1);
-			long t3 = System.currentTimeMillis();
 
 						
 			for (int i = 0; i < jsonNeighborSuperVertices.length(); i++)
@@ -191,42 +182,34 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
+//				System.out.println("putting" + neighborSuperVertexTuple[0] + 
+//						"with val" + Arrays.toString(neighborSuperVertexTuple));
 				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
-				jsonNeighborSuperVertexTuple = null;
-				super_out_edges++;
+//				 try {
+//	                    
+//	                    System.out.println(getCurrentVertex().getId()+  " retrieving" + neighborSuperVertexTuple[0] + "with map" + neighborSuperVerticesTable.getData().get(neighborSuperVertexTuple[0]));
+//	                } catch (Exception e) {
+//	                    throw new RuntimeException("Could not find key " + neighborSuperVertexTuple[0]);
+//	                }
 			}
-			long t4 = System.currentTimeMillis();
-			////System.out.println(t4-t2);
+
 
 			metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
 			metadata.setMetadata("edges", edgeKeyFields, edgeFieldTypes);
 			metadata.setMetadata("incomingNeighbors", incomingNeighborsKeyFields, incomingNeighborsFieldTypes);
 			metadata.setMetadata("outgoingNeighbors", outgoingNeighborsKeyFields, outgoingNeighborsFieldTypes);
 			
-//			System.out.println("Metadata after reading input " + metadata);
 			
 			Database database = new Database(metadata,-1);
 			StringBuffer sb = new StringBuffer();
 			database.addDataTable("vertices", vertexTable);
-//			sb.append("[Size of vertices = " + MemoryMeasurer.measureBytes(vertexTable) + "]");
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
-//			sb.append("[database after out neigh = " + MemoryMeasurer.measureBytes(database) + "].");
 			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
-//			sb.append("[database after neighbor super = " + MemoryMeasurer.measureBytes(database) + "].");
 			
-
-			//FIXME the tables below are not needed for the evaluation
-//			database.addDataTable("edges", edgesTable); //TODO Vicky checking if can be removed
-//			sb.append("[database after edges = " + MemoryMeasurer.measureBytes(database) + "].");
-//			database.addDataTable("incomingNeighbors", incomingNeighborsTable); //TODO Vicky checking if can be removed
-//			sb.append("[database after in neigh = " + MemoryMeasurer.measureBytes(database) + "].");
-//			database.addDataTable("messages_full", messagesTable);
-//			sb.append("[database after msg table = " + MemoryMeasurer.measureBytes(database) + "].");
-			
-			
-
-			sb.append("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
-			System.out.println(sb.toString());
+			Date date = new Date();
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+			String formattedDate = sdf.format(date);
+			System.out.println(formattedDate + "  Finished loading graph \n.");
 			
 			return database;
 		}
