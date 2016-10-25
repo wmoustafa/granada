@@ -35,7 +35,7 @@ public class DatalogVertexInputFormatFromEachLine2 extends
 		return new DatalogVertexReaderFromEachLine();
 	}
 	
-	class DatalogVertexReaderFromEachLine extends 
+	public class DatalogVertexReaderFromEachLine extends 
 			TextVertexReaderFromEachLineProcessedHandlingExceptions<String, IOException>
 	{
 
@@ -48,7 +48,7 @@ public class DatalogVertexInputFormatFromEachLine2 extends
 		}
 
 		@Override
-		protected SuperVertexId getId(String input) throws IOException {
+		public SuperVertexId getId(String input) throws IOException {
 			Pattern id = Pattern.compile("\\[\\[(\\d+?,\\d+?)\\]");			
 			Matcher m = id.matcher(input);
 			if(!m.find())	
@@ -63,7 +63,7 @@ public class DatalogVertexInputFormatFromEachLine2 extends
 		}
 
 		@Override
-		protected Database getValue(String input) throws  IOException {
+		public Database getValue(String input) throws  IOException {
 			
 			Metadata metadata = new Metadata();
 						
@@ -129,7 +129,7 @@ public class DatalogVertexInputFormatFromEachLine2 extends
 			}
 			else
 			{
-				throw new IOException("The input string did not match the regex pattern for 	vertex data."
+				throw new IOException("The input string did not match the regex pattern for vertex data."
 						+ "Input = " + input);
 			}
 		
@@ -138,10 +138,10 @@ public class DatalogVertexInputFormatFromEachLine2 extends
 //			if(input.charAt(2) == '0' && input.charAt(4) == '0')
 //			{
 //				System.out.println((input.charAt(2) - '0')+","+ (input.charAt(4) - '0'));
-//				System.out.println("vertices = " + vertexTable);
-//				System.out.println("edges" + outgoingNeighborsTable);
+				System.out.println("vertices = " + vertexTable);
+				System.out.println("edges" + outgoingNeighborsTable);
 //			}
-//			System.out.println("sv neighbors" + neighborSuperVerticesTable);
+			System.out.println("sv neighbors" + neighborSuperVerticesTable);
 			Database database = new Database(metadata,-1);
 			database.addDataTable("vertices", vertexTable);
 			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);

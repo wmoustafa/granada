@@ -12,6 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import org.json.JSONArray;
@@ -47,11 +49,11 @@ public class RunLocallyMain {
 	
 	public static void main(String args[]) throws IOException, InterruptedException, JSONException, ParseException
 	{
-		String input_file = new String(path+"pokec.100.datalog.txt"); //FIXME 
+		String input_file = new String(path+"small_20.1.datalog.txt"); //FIXME 
 		String dl_program = new String(path+"wcc_new.txt"); //FIXME
 		program_name = "wcc";
 		loadGraph(input_file, input_graph);
-		System.out.println("[Size of total graph  = " + MemoryMeasurer.measureBytes(input_graph) + "].");
+//		System.out.println("[Size of total graph  = " + MemoryMeasurer.measureBytes(input_graph) + "].");
 		preComputation(dl_program);
 		
 		for(int superstep=0; superstep<10; superstep++)
@@ -228,135 +230,116 @@ public class RunLocallyMain {
 		
 		// each line of input file contains the data and id of one super-vertex
 		String line=null;
+		Pattern id = Pattern.compile("\\[\\[(\\d+?,\\d+?)\\]");			
+		
 		while((line = bfi.readLine()) != null)
 		{
-			JSONArray in_a = new JSONArray(line.toString());
-			JSONArray superVertexId = in_a.getJSONArray(0);
-			SuperVertexId s_id =  new SuperVertexId((short)(superVertexId.getInt(0)), superVertexId.getInt(1));
-			Database data = readSuperVertexData(in_a);
+			Matcher m = id.matcher(line);	
+			if(!m.find())	
+			{
+				System.out.println("---> No match found for " + input);
+				throw new IOException("The input string did not match the regex pattern for super-vertex id."
+						+ "Input = " + input);
+			}	
+			String[] sv_id = m.group(1).split(",");
+//			System.out.println(Integer.parseInt(sv_id[0])+","+ Integer.parseInt(sv_id[1]));
+			
+			SuperVertexId s_id =  new SuperVertexId((short)Integer.parseInt(sv_id[0]), Integer.parseInt(sv_id[1]));
+			Database data = readSuperVertexData(line);
 			input_graph.put(s_id, data);
 		}
 		bfi.close();
 	}
 	
-	private static Database readSuperVertexData(JSONArray input) throws JSONException, IOException
+	private static Database readSuperVertexData(String input) throws JSONException, IOException
 	{
-			int vertex_counter = 0;
-			int edge_counter = 0;
+		Metadata metadata = new Metadata();
 		
-			Metadata metadata = new Metadata();
-			
-			JSONArray jsonSuperVertexValues = input.getJSONArray(1);
-			
-			int[] vertexKeyFields = new int[]{0};
-			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
-			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
-			Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, jsonSuperVertexValues.length());
-			
-			int[] edgeKeyFields = new int[]{0};
-			Class[] edgeFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-//			Table edgesTable = new Table(edgeFieldTypes, edgeKeyFields, nEdges);
+		int[] vertexKeyFields = new int[]{0};
+		Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
+		Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, 10000); // <<- FIXME Initial size
 
-			int[] outgoingNeighborsKeyFields = new int[]{0};
-			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, jsonSuperVertexValues.length());
+		int[] outgoingNeighborsKeyFields = new int[]{0};
+		Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+		Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, 10000); // <<- FIXME Initial size
 
-			int[] incomingNeighborsKeyFields = new int[]{0};
-			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-//			Table incomingNeighborsTable = new Table(incomingNeighborsFieldTypes, incomingNeighborsKeyFields, jsonSuperVertexValues.length());
-
-//			int[] messagesKeyFields = new int[]{0};
-//			Class[] messagesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-//			Table messagesTable = new Table(messagesFieldTypes, messagesKeyFields);
-//			messagesTable.setAggregationFunctionType(AggregationFunctionType.SUM);;
-
-			JSONArray jsonNeighborSuperVertices = input.getJSONArray(3);
-
-			int[] neighborSuperVerticesKeyFields = new int[]{0};
-			//Class[] vertexFieldTypes = new Class[]{Integer.class, String.class, String.class};
-			Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-			Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, jsonNeighborSuperVertices.length());
-			
-
-			long t1 = System.currentTimeMillis();
-			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
-			{
-				JSONArray jsonVertexValues = jsonSuperVertexValues.getJSONArray(i);
-				JSONArray jsonVertexTuple = jsonVertexValues.getJSONArray(0);
-				JSONArray jsonInEdgeTupleArray = jsonVertexValues.getJSONArray(1);
-				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
-
-				int[] vertexTuple = new int[jsonVertexTuple.length()];
-				for (int j = 0; j < jsonVertexTuple.length(); j++)
+		int[] neighborSuperVerticesKeyFields = new int[]{0};
+		Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+		Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, 100);
+		
+		Pattern sv_data = Pattern.compile("(\\[.*?\\])(\\[.*?\\])\\]");
+		Pattern vdata = Pattern.compile("\\((\\d+,\\d+)\\)(\\[.*?\\])");
+		Pattern edges = Pattern.compile("\\((\\d+,\\d+)\\)");
+		Pattern sv_edges = Pattern.compile("\\((\\d+,\\d+,\\d+)\\)");
+		Matcher sv_matcher = sv_data.matcher(input.substring(6));
+		Matcher v_matcher = vdata.matcher("");
+		Matcher e_matcher = edges.matcher("");
+		Matcher sve_matcher = sv_edges.matcher("");
+		
+		if(sv_matcher.find())
+		{
+			v_matcher.reset(sv_matcher.group(1));
+	
+			//Read vertex data
+			while(v_matcher.find())
 				{
-					if (vertexFieldTypes[j] == String.class) 
-						throw new RuntimeException("String: Unsupported data type");
-					else if (vertexFieldTypes[j] == Integer.class) 
-						vertexTuple[j] = jsonVertexTuple.getInt(j);
-					else if (vertexFieldTypes[j] == Boolean.class) 
-						throw new RuntimeException("Boolean: Unsupported data type");
-				}				
+				//Read vertex id
+				int[] vertexTuple = new int[2];
+				String[] v_id = v_matcher.group(1).split(",");
+				vertexTuple[0] = Integer.parseInt(v_id[0]);
+				vertexTuple[1] = Integer.parseInt(v_id[1]);
 				vertexTable.putTuple(new Tuple(vertexTuple));
-				vertex_counter++;
-			
-
-//				int[] messagesTuple = new int[3];
-//				messagesTuple[0] = jsonVertexTuple.getInt(0);
-//				messagesTuple[1] = 0;
-//				messagesTuple[2] = 0;
-//				messagesTable.putTuple(new Tuple(messagesTuple));
-
-				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
+				
+				//Read edges of current vertex
+				e_matcher.reset(v_matcher.group(2));
+				while(e_matcher.find())
 				{
 					int[] edgeTuple = new int[3];
-					edgeTuple[0] = jsonVertexTuple.getInt(0);
-					JSONArray edgeEndVertexAndWeight = jsonOutEdgeTupleArray.getJSONArray(j);
-					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
-					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
-//					edgesTable.putTuple(new Tuple(edgeTuple));
-					
+					edgeTuple[0] = vertexTuple[0];
+					String[] e_id = e_matcher.group(1).split(",");
+					edgeTuple[1] = Integer.parseInt(e_id[0]);
+					edgeTuple[2] = Integer.parseInt(e_id[1]);	
 					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
-					edge_counter++;
-					edgeEndVertexAndWeight = null;
 				}
-
 			}
-
-						
-			for (int i = 0; i < jsonNeighborSuperVertices.length(); i++)
+			
+			//Read neighbors of current super-vertex
+			sve_matcher.reset(sv_matcher.group(2));
+			while(sve_matcher.find())
 			{
-				JSONArray jsonNeighborSuperVertexTuple = jsonNeighborSuperVertices.getJSONArray(i);
+				String[] e_id = sve_matcher.group(1).split(",");
 				int[] neighborSuperVertexTuple = new int[3];
-				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
-				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
-				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
+				neighborSuperVertexTuple[0] = Integer.parseInt(e_id[0]);
+				neighborSuperVertexTuple[1] = Integer.parseInt(e_id[1]);
+				neighborSuperVertexTuple[2] = Integer.parseInt(e_id[2]);
 				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
 			}
-
-
-			metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
-			metadata.setMetadata("edges", edgeKeyFields, edgeFieldTypes);
-			metadata.setMetadata("incomingNeighbors", incomingNeighborsKeyFields, incomingNeighborsFieldTypes);
-			metadata.setMetadata("outgoingNeighbors", outgoingNeighborsKeyFields, outgoingNeighborsFieldTypes);
-			
-//			System.out.println("Metadata after reading input " + metadata);
-			
-			Database database = new Database(metadata,-1);
-			StringBuffer sb = new StringBuffer();
-			
-//			database.addDataTable("vertices", vertexTable);
-//			sb.append("[Size of vertices = " + MemoryMeasurer.measureBytes(vertexTable) + "]");
-//			sb.append("[Number of vertices = " + vertex_counter + "]");
-//			database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
-//			sb.append("[Size of outgoingNeighbors = " + MemoryMeasurer.measureBytes(outgoingNeighborsTable) + "].");
-//			sb.append("[Number of outgoingNeighbors = " + edge_counter+ "].");
-//			database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
-//			sb.append("[Size of neighborSuperVertices = " + MemoryMeasurer.measureBytes(neighborSuperVerticesTable) + "].");
-//			database.addDataTable("messages_full", messagesTable);
-//			sb.append("[Size of msg table = " + MemoryMeasurer.measureBytes(messagesTable) + "].");
-			
-//			sb.append("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
-//			System.out.println(sb.toString());
-			return database;
+		}
+		else
+		{
+			throw new IOException("The input string did not match the regex pattern for vertex data."
+					+ "Input = " + input);
+		}
+	
+		metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
+		metadata.setMetadata("outgoingNeighbors", outgoingNeighborsKeyFields, outgoingNeighborsFieldTypes);
+//		if(input.charAt(2) == '0' && input.charAt(4) == '0')
+//		{
+//			System.out.println((input.charAt(2) - '0')+","+ (input.charAt(4) - '0'));
+			System.out.println("vertices = " + vertexTable);
+			System.out.println("edges" + outgoingNeighborsTable);
+//		}
+		System.out.println("sv neighbors" + neighborSuperVerticesTable);
+		Database database = new Database(metadata,-1);
+		database.addDataTable("vertices", vertexTable);
+		database.addDataTable("outgoingNeighbors", outgoingNeighborsTable);
+		database.addDataTable("neighborSuperVertices", neighborSuperVerticesTable);
+		
+//		Date date = new Date();
+//		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+//		String formattedDate = sdf.format(date);
+//		System.out.println(formattedDate + "  Finished loading graph \n.");
+		
+		return database;
 	}
 }

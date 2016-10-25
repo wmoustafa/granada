@@ -30,6 +30,7 @@ public class Database implements Writable {
 	private int size = 0;
 	private Metadata metadata;
 	private int superstep = 0;
+	private Table full_table; //Vicky link to full table for printing output
 	
 	public Database()
 	{
@@ -49,6 +50,11 @@ public class Database implements Writable {
 	public Table getDataTableByName(String name)
 	{
 		return tables.get(name);
+	}
+	
+	public Table getFullTable()
+	{
+		return full_table;
 	}
 	
 	public void addDataTable(String name, Table dataTable)
@@ -267,7 +273,7 @@ public class Database implements Writable {
 			String deltaTableName = entry.getKey();
 			if (deltaTableName.endsWith("_full")) continue;
 			Table deltaTable = entry.getValue();
-			Table fullTable = tables.get(deltaTableName + "_full");
+			Table fullTable = tables.get(deltaTableName + "_full");			
 			if (fullTable != null) 
 			{
 //				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
@@ -278,6 +284,7 @@ public class Database implements Writable {
 			{
 //				System.out.println("Add full table " + deltaTableName + "_full");
 				tables.put(deltaTableName + "_full", deltaTable);
+				full_table = deltaTable;
 				if (!deltaTable.isEmpty()) changedTables.add(deltaTableName);
 			}
 //			System.out.println("Add table " + deltaTableName);

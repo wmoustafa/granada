@@ -36,9 +36,9 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 		
 	}
 	@Override
-	public void compute(
-			Vertex<SuperVertexId, Database, NullWritable> vertex,
-			Iterable<Database> messages) throws IOException {
+	public void compute(Vertex<SuperVertexId, Database, NullWritable> vertex, 
+						Iterable<Database> messages) throws IOException {
+		
 			StringBuffer sb = null;
 			DatalogWorkerContext wc = getWorkerContext();
 			boolean useSemiAsync = wc.useSemiAsync();
@@ -52,7 +52,8 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			if(vertex.getId().getVertexId() == 0  ){
 				sb = new StringBuffer();
 				sb.append("***************************************** \n");
-				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n\n");				
+				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n\n");	
+				sb.append(inputDatabase.toString());
 
 			}
 			Database relationalDatabase = new Database();
