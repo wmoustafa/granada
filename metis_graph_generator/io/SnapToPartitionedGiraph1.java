@@ -494,7 +494,7 @@ public class SnapToPartitionedGiraph1 {
 					int from = Integer.parseInt(split[0]);
 					int to = Integer.parseInt(split[1]);
 					numberOfNieghbors[from]++;
-//					numberOfNieghbors[to]++;
+//					numberOfNieghbors[to]++; //FIXME vicky fix for making output files same as snap
 					nEdges++;
 				}
 				counter++;
@@ -529,7 +529,7 @@ public class SnapToPartitionedGiraph1 {
 					graph[from][currentIndex[from] + 1] = to;
 					currentIndex[from]++;
 					graph[to][0] = to;
-//					graph[to][currentIndex[to] + 1] = from;
+//					graph[to][currentIndex[to] + 1] = from; //FIXME vicky fix for making output files same as snap 
 //					currentIndex[to]++;
 				}
 				counter++;
