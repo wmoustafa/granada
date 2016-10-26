@@ -4,9 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import algebra.RelationalType;
-import objectexplorer.MemoryMeasurer;
-import objectexplorer.ObjectGraphMeasurer;
-import objectexplorer.ObjectGraphMeasurer.Footprint;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;

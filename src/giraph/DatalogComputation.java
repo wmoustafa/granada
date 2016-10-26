@@ -22,9 +22,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import schema.Database;
 import schema.Metadata;
 
-import objectexplorer.MemoryMeasurer;
-import objectexplorer.ObjectGraphMeasurer;
-import objectexplorer.ObjectGraphMeasurer.Footprint;
 
 public class DatalogComputation extends BasicComputation<SuperVertexId, Database, NullWritable, Database> {
 	private static final Logger LOG =
@@ -39,7 +36,18 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 	public void compute(
 			Vertex<SuperVertexId, Database, NullWritable> vertex,
 			Iterable<Database> messages) throws IOException {
-			StringBuffer sb = null;
+//			StringBuffer sb = null;
+//			if(vertex.getId().getVertexId() > 0 && vertex.getId().getVertexId() < 10  ){
+//				sb = new StringBuffer();
+//				sb.append("***************************************** \n");
+//				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n");	
+//				sb.append("[BEFORE Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. ");
+//				sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
+//			}
+		
+		System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
+		
+
 			DatalogWorkerContext wc = getWorkerContext();
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
@@ -49,16 +57,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			
 			
 			Database inputDatabase = vertex.getValue();
-			if(vertex.getId().getVertexId() == 0  ){
-				sb = new StringBuffer();
-				sb.append("***************************************** \n");
-				sb.append("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep() + "\n\n");				
-				sb.append("[Size of input database = " + MemoryMeasurer.measureBytes(inputDatabase) + "].\n");
-				Footprint footprint = ObjectGraphMeasurer.measure(inputDatabase);
-				sb.append("InputDatabase = " +footprint + "\n");
-				//FIXME seems to be wrong
-				//sb.append("[Size of incoming messages  = " + MemoryMeasurer.measureBytes(messages) + "].\n");
-			}
 			Database relationalDatabase = new Database();
 
 			//Vicky: Combine messages from all neighbors into one message. Combine databases in per-table basis, apply aggregation on tuples with the same key
@@ -67,9 +65,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			for (Database message : messages){
 				messagesDb.combine2(message);				
 			}
-			if(vertex.getId().getVertexId() == 0){
-				sb.append("[Size of messagesDB after combine = " + MemoryMeasurer.measureBytes(messagesDb) + "]. \n");
-			}
+
 			assert(!messagesDb.isEmpty());
 					
 			Set<String> changedTables = new HashSet<>();
@@ -79,10 +75,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			for (Rule rule : rulesToProcess)
 			{
 				Database outputDatabase = rule.getEvaluationPlan().duplicate().evaluate(inputDatabase, metadata);
-				if(vertex.getId().getVertexId() == 0){
-					sb.append("[Size of outputDatabase = " + MemoryMeasurer.measureBytes(outputDatabase) +" ] \n");
-				}
-				
+								
 				//TODO for PageRank improvement to remove intermediate results
 				if (wc.getProgramName().equals("page_rank")) {   
 					inputDatabase.removeDataTable(rule.getHead().getName());
@@ -99,12 +92,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					changed = relationalDatabase.combine2(outputDatabase);
 					changedTables.addAll(changed);
 				}
-			}
-			if(vertex.getId().getVertexId() == 0){
-				sb.append("[Size of inputDatabase after plan evaluation = " + MemoryMeasurer.measureBytes(inputDatabase) + "].\n");
-				Footprint footprint = ObjectGraphMeasurer.measure(inputDatabase);
-				sb.append("InputDatabase = " +footprint + "\n");
-				sb.append("[Size of relationalDatabase = " +  MemoryMeasurer.measureBytes(relationalDatabase) + "].\n");
 			}
 			
 			for (String table : changedTables)
@@ -125,9 +112,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 				else if (useSemiAsync && useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
-				if(vertex.getId().getVertexId() == 0){
-					sb.append("Map supervertex to message = " + MemoryMeasurer.measureBytes(superVertexIdToDatabase) + "] \n");
-				}
 				
 				for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
 				{
@@ -136,10 +120,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //					sb.append("[Message send size= " + MemoryMeasurer.measureBytes(neighborDb) + "]");
 					sendMessage(neighborId, neighborDb);
 				}
-			}
-			if(vertex.getId().getVertexId() == 0){
-				sb.append("[AFTER Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. \n");
-				System.out.println(sb.toString());
 			}
 			
 			vertex.setValue(inputDatabase);

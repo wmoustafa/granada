@@ -3,9 +3,6 @@ package query.filter;
 import java.util.Arrays;
 
 import algebra.RelationalType;
-import objectexplorer.MemoryMeasurer;
-import objectexplorer.ObjectGraphMeasurer;
-import objectexplorer.ObjectGraphMeasurer.Footprint;
 import parser.Expression;
 import schema.Database;
 import schema.Metadata;

@@ -13,12 +13,10 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
 import schema.Tuple;
-import utils.AggregationFunctionType;
 
 
 
@@ -225,7 +223,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			
 			
 
-			sb.append("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
+//			sb.append("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
 			System.out.println(sb.toString());
 			
 			return database;

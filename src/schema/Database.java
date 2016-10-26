@@ -21,7 +21,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
-import objectexplorer.MemoryMeasurer;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
 
@@ -54,7 +53,9 @@ public class Database implements Writable {
 	
 	public void addDataTable(String name, Table dataTable)
 	{
+//		System.out.println("Adding table " + name);
 		tables.put(name, dataTable);
+//		System.out.println("Database after adding = " + tables);
 	}
 	
 	public void removeDataTable(String name)
@@ -95,7 +96,6 @@ public class Database implements Writable {
 			Entry<String,Table> t = tablesIterator.next();
 			String tableName = t.getKey();
 			Table table = t.getValue();
-//			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
 		}
 		return(sb.toString());
 	}
@@ -272,17 +272,17 @@ public class Database implements Writable {
 			Table fullTable = tables.get(deltaTableName + "_full");
 			if (fullTable != null) 
 			{
-//				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
+				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
 				boolean tableChanged = fullTable.combineAndSubtract(deltaTable);
 				if (tableChanged) changedTables.add(deltaTableName);
 			}
 			else
 			{
-//				System.out.println("Add full table " + deltaTableName + "_full");
+				System.out.println("Add full table " + deltaTableName + "_full");
 				tables.put(deltaTableName + "_full", deltaTable);
 				if (!deltaTable.isEmpty()) changedTables.add(deltaTableName);
 			}
-//			System.out.println("Add table " + deltaTableName);
+			System.out.println("Add table " + deltaTableName);
 			tables.put(deltaTableName, deltaTable);
 		}
 		return changedTables;
@@ -510,7 +510,7 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table thisTable = entry.getValue();
-			if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
+//			if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
 			s.append(tableName + "=" + thisTable);
 		}
 		s.append("]");
