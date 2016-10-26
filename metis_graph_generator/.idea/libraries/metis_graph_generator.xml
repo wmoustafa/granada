@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="metis_graph_generator">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/gson-2.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/fastutil-7.0.9.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
