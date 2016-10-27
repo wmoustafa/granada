@@ -11,7 +11,7 @@ import schema.Tuple;
 public abstract class Filter {
 	
 	Expression[] filterConditions;
-	Iterator<Tuple> results;
+	Iterator<int[]> results;
 	//Database inputDatabase;
 	//Database outputDatabase;
 	long executionTime=0;

@@ -7,38 +7,38 @@ import java.util.Map.Entry;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
 
-public class Multimap<Integer,Tuple> {
+public class Multimap {
 	
 //	ModifiedJavaHashmap<K,LinkedList<V>> map;
-	LinkedList<Tuple> emptyValue = new LinkedList<>();
+	IntArrayHashSet emptyValue = new IntArrayHashSet(1);
 	int size = 0;
-	Int2ObjectOpenHashMap<LinkedList<Tuple>> map;
+	Int2ObjectOpenHashMap<IntArrayHashSet> map;
 	
 	public Multimap()
 	{
-		map = new Int2ObjectOpenHashMap<LinkedList<Tuple>>();
+		map = new Int2ObjectOpenHashMap<IntArrayHashSet>();
 	}
 	
 	public Multimap(int initialSize)
 	{
-		map = new Int2ObjectOpenHashMap<LinkedList<Tuple>>(); 
+		map = new Int2ObjectOpenHashMap<IntArrayHashSet>(); 
 	}
 
-	public void put(int key, Tuple value)
+	public void put(int key, int[] value)
 	{
-		LinkedList<Tuple> existingSet = map.get(key);
+		IntArrayHashSet existingSet = map.get(key);
 		if (existingSet == null)
 		{
-			existingSet = new LinkedList<Tuple>();
+			existingSet = new IntArrayHashSet(1);
 			map.put(key, existingSet);
 		}
 		boolean elementAdded = existingSet.add(value);
 		if (elementAdded) size++;
 	}
 	
-	public void remove(int key, Tuple value)
+	public void remove(int key, int[] value)
 	{
-		LinkedList<Tuple> existingSet = map.get(key);
+		IntArrayHashSet existingSet = map.get(key);
 		if (existingSet != null)
 		{
 			boolean removed = existingSet.remove(value);
@@ -47,15 +47,15 @@ public class Multimap<Integer,Tuple> {
 		}
 	}
 
-	public LinkedList<Tuple> get(int key)
+	public IntArrayHashSet get(int key)
 	{
-		LinkedList<Tuple> value = map.get(key);
+		IntArrayHashSet value = map.get(key);
 		if (value != null) return value; else return emptyValue;
 	}
 	
-	public boolean contains(int key, Tuple value)
+	public boolean contains(int key, int[] value)
 	{
-		LinkedList<Tuple> values = map.get(key);
+		IntArrayHashSet values = map.get(key);
 		if (values == null) return false;
 		return values.contains(value);
 	}
@@ -64,20 +64,20 @@ public class Multimap<Integer,Tuple> {
 	{
 		return size;
 	}
-	public ObjectSet<Entry<java.lang.Integer, LinkedList<Tuple>>> entries() {
+	public ObjectSet<Entry<java.lang.Integer, IntArrayHashSet>> entries() {
 		return map.entrySet();
 	}
-	public Iterable<Tuple> values()
+	public Iterable<int[]> values()
 	{
-		final Iterator<LinkedList<Tuple>> values= map.values().iterator();
-		return new Iterable<Tuple>() {
+		final Iterator<IntArrayHashSet> values= map.values().iterator();
+		return new Iterable<int[]>() {
 
 			@Override
-			public Iterator<Tuple> iterator() {
+			public Iterator<int[]> iterator() {
 
-				return new Iterator<Tuple>() {
+				return new Iterator<int[]>() {
 					
-					private Iterator<Tuple> current = values.hasNext() ? values.next().iterator() : null;
+					private Iterator<int[]> current = values.hasNext() ? values.next().iterator() : null;
 						
 					@Override
 					public boolean hasNext() {
@@ -90,7 +90,7 @@ public class Multimap<Integer,Tuple> {
 					}
 
 					@Override
-					public Tuple next() {
+					public int[] next() {
 						return current.next();
 					}
 

@@ -272,14 +272,14 @@ public class RunLocallyMain {
 					else if (vertexFieldTypes[j] == Boolean.class) 
 						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
-				vertexTable.putTuple(new Tuple(vertexTuple));
+				vertexTable.putTuple(vertexTuple);
 			
 
 				int[] messagesTuple = new int[3];
 				messagesTuple[0] = jsonVertexTuple.getInt(0);
 				messagesTuple[1] = 0;
 				messagesTuple[2] = 0;
-				messagesTable.putTuple(new Tuple(messagesTuple));
+				messagesTable.putTuple(messagesTuple);
 
 				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
 				{
@@ -290,7 +290,7 @@ public class RunLocallyMain {
 					edgeTuple[2] = edgeEndVertexAndWeight.getInt(1);
 //					edgesTable.putTuple(new Tuple(edgeTuple));
 					
-					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
+					outgoingNeighborsTable.putTuple(edgeTuple);
 					edgeEndVertexAndWeight = null;
 				}
 
@@ -304,7 +304,7 @@ public class RunLocallyMain {
 				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
-				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
+				neighborSuperVerticesTable.putTuple(neighborSuperVertexTuple);
 			}
 
 

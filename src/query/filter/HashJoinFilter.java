@@ -14,7 +14,7 @@ import schema.Tuple;
 public class HashJoinFilter extends Filter {
 
 	boolean buildRightHashTable;
-	Multimap<Integer,Tuple> rightBuild;
+	Multimap rightBuild;
 	Expression[] lhsExpressions, rhsExpressions;
 	TableAlias rhsTableAlias;
 	
@@ -57,9 +57,10 @@ public class HashJoinFilter extends Filter {
 				rightBuild = new Multimap(); 
 				while (results.hasNext())
 				{
-					Tuple currentTuple = results.next();
-					rhsCursor.setCurrentTuple(rhsTableAlias, currentTuple.toArray());
-					int v = rhsCursor.evaluate(rhsExpressions).toArray()[0];
+					int[] currentTuple = results.next();
+					rhsCursor.setCurrentTuple(rhsTableAlias, currentTuple);
+					//int v = rhsCursor.evaluate(rhsExpressions).toArray()[0];
+					int v = rhsExpressions[0].evaluate(rhsCursor);
 					rightBuild.put(v, currentTuple);
 				}
 			}
@@ -75,16 +76,16 @@ public class HashJoinFilter extends Filter {
 			int lhsValues = lhsExpressions[0].evaluate(cursor);
 
 //			System.out.println("left tuples = " + lhsValues);
-			Iterable<Tuple> matchingTuples;
+			Iterable<int[]> matchingTuples;
 			if (rhsExpressions.length != 0)
 				matchingTuples = rightBuild.get(lhsValues);
 			else
 				matchingTuples = rightBuild.values();
 			if (matchingTuples!=null)
 			{
-				for (Tuple currentTuple : matchingTuples)
+				for (int[] currentTuple : matchingTuples)
 				{
-					cursor.setCurrentTuple(rhsTableAlias, currentTuple.toArray());
+					cursor.setCurrentTuple(rhsTableAlias, currentTuple);
 					boolean isConditionTrue = true;
 					for (Expression filterCondition: filterConditions)
 						if (filterCondition.evaluate(cursor) == 1?false:true) {

@@ -3,7 +3,6 @@ package evaluation;
 import java.util.Arrays;
 
 import parser.Expression;
-import schema.Tuple;
 
 public class Cursor {
 
@@ -36,17 +35,17 @@ public class Cursor {
 		return cursor.keySet();
 	}*/
 	
-	public Tuple evaluate(Expression[] outputFields)
+	public void evaluate(Expression[] outputFields, int[] values)
 	{
 //		return outputFields[0].evaluate(this);
-		int[] values = new int[outputFields.length];
+		//int[] values = new int[outputFields.length];
 		int i=0;
 		for (Expression e : outputFields)
 		{
 //			System.out.println("Expression = " + e.toString());
 			values[i++] = e.evaluate(this);
 		}
-		return new Tuple(values);
+		//return new Tuple(values);
 	}
 		
 	public String toString()

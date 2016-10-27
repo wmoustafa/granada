@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.io.Writable;
@@ -21,7 +22,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
-import objectexplorer.MemoryMeasurer;
 import parser.Expression;
 import schema.Table.PartitionWithMessages;
 
@@ -95,7 +95,7 @@ public class Database implements Writable {
 			Entry<String,Table> t = tablesIterator.next();
 			String tableName = t.getKey();
 			Table table = t.getValue();
-			sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
+			//sb.append("[Table: " + tableName + " size: " + MemoryMeasurer.measureBytes(table) + "]");
 		}
 		return(sb.toString());
 	}
@@ -511,7 +511,7 @@ public class Database implements Writable {
 		{
 			String tableName = entry.getKey();
 			Table thisTable = entry.getValue();
-			if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
+			//if (tableName.equals("vertices") || tableName.equals("edges") || tableName.equals("neighborSuperVertices") || tableName.equals("incomingNeighbors") || tableName.equals("outgoingNeighbors")) continue;
 			s.append(tableName + "=" + thisTable);
 		}
 		s.append("]");

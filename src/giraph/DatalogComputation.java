@@ -22,10 +22,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import schema.Database;
 import schema.Metadata;
 
-import objectexplorer.MemoryMeasurer;
-import objectexplorer.ObjectGraphMeasurer;
-import objectexplorer.ObjectGraphMeasurer.Footprint;
-
 public class DatalogComputation extends BasicComputation<SuperVertexId, Database, NullWritable, Database> {
 	private static final Logger LOG =
 			Logger.getLogger(DatalogComputation.class);

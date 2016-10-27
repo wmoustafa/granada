@@ -21,6 +21,7 @@ public class ProjectFilter extends Filter {
 	boolean isRecursive;
 	boolean isSourceNodeVariableUnncessary;
 	RelationalType relationalType;
+	int[] projection;
 	
 	public ProjectFilter(String outputTableName, int[] keyFields, Expression[] outputFields, AggregationFunctionType aggregationFunctionType, boolean isRecursive, boolean isSourceNodeVariableUnncessary, RelationalType relationalType, Metadata metadata)
 	{
@@ -37,7 +38,8 @@ public class ProjectFilter extends Filter {
 		this.aggregationFunctionType = aggregationFunctionType;
 		this.isRecursive = isRecursive;
 		this.isSourceNodeVariableUnncessary = isSourceNodeVariableUnncessary;
-		this.relationalType = relationalType;		
+		this.relationalType = relationalType;
+		projection = new int[outputFields.length];
 	}
 	
 	public Filter duplicate()
@@ -65,7 +67,7 @@ public class ProjectFilter extends Filter {
 
 	@Override
 	public void next() {
-		Tuple projection = cursor.evaluate(outputFields);
+		cursor.evaluate(outputFields, projection);
 		outputTable.addTuple(projection);
 	}
 

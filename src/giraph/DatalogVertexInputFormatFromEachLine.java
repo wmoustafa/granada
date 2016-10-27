@@ -1,6 +1,7 @@
 package giraph;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.giraph.edge.Edge;
@@ -13,7 +14,6 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
@@ -118,6 +118,11 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			////System.out.println(jsonSuperVertexValues.length() + " " + nEdges + " " + jsonNeighborSuperVertices.length());
 			////System.out.println("Free memory: " + Runtime.getRuntime().freeMemory()/1024/1024);
 			long t1 = System.currentTimeMillis();
+			int[] vertexTuple = new int[vertexFieldTypes.length];
+			int[] messagesTuple = new int[3];
+			int[] edgeTuple = new int[3];
+			int[] neighborSuperVertexTuple = new int[3];
+
 			for (int i = 0; i < jsonSuperVertexValues.length(); i++)
 			{
 				JSONArray jsonVertexValues = jsonSuperVertexValues.getJSONArray(i);
@@ -125,7 +130,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 				JSONArray jsonInEdgeTupleArray = jsonVertexValues.getJSONArray(1);
 				JSONArray jsonOutEdgeTupleArray = jsonVertexValues.getJSONArray(2);
 
-				int[] vertexTuple = new int[jsonVertexTuple.length()];
 				for (int j = 0; j < jsonVertexTuple.length(); j++)
 				{
 					if (vertexFieldTypes[j] == String.class) 
@@ -135,14 +139,13 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 					else if (vertexFieldTypes[j] == Boolean.class) 
 						throw new RuntimeException("Boolean: Unsupported data type");
 				}				
-				vertexTable.putTuple(new Tuple(vertexTuple));
+				vertexTable.putTuple(vertexTuple);
 				vertex_number++;
 
-				int[] messagesTuple = new int[3];
 				messagesTuple[0] = jsonVertexTuple.getInt(0);
 				messagesTuple[1] = 0;
 				messagesTuple[2] = 0;
-				messagesTable.putTuple(new Tuple(messagesTuple));
+				messagesTable.putTuple(messagesTuple);
 //				for (int j = 0; j < jsonInEdgeTupleArray.length(); j++)
 //				{
 //					int[] edgeTuple = new int[3];
@@ -163,7 +166,6 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 
 				for (int j = 0; j < jsonOutEdgeTupleArray.length(); j++)
 				{
-					int[] edgeTuple = new int[3];
 					edgeTuple[0] = jsonVertexTuple.getInt(0);
 					JSONArray edgeEndVertexAndWeight = jsonOutEdgeTupleArray.getJSONArray(j);
 					edgeTuple[1] = edgeEndVertexAndWeight.getInt(0);
@@ -171,7 +173,7 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 //					edgesTable.putTuple(new Tuple(edgeTuple));
 					out_edges_number++;
 					
-					outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
+					outgoingNeighborsTable.putTuple(edgeTuple);
 					edgeEndVertexAndWeight = null;
 				}
 				jsonVertexValues = null;
@@ -187,11 +189,17 @@ public class DatalogVertexInputFormatFromEachLine extends TextVertexInputFormat<
 			for (int i = 0; i < jsonNeighborSuperVertices.length(); i++)
 			{
 				JSONArray jsonNeighborSuperVertexTuple = jsonNeighborSuperVertices.getJSONArray(i);
-				int[] neighborSuperVertexTuple = new int[3];
 				neighborSuperVertexTuple[0] = jsonNeighborSuperVertexTuple.getInt(0);
 				neighborSuperVertexTuple[1] = jsonNeighborSuperVertexTuple.getInt(1);
 				neighborSuperVertexTuple[2] = jsonNeighborSuperVertexTuple.getInt(2);
-				neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
+				//System.out.println("putting" + neighborSuperVertexTuple[0] + "with val" + Arrays.toString(neighborSuperVertexTuple));
+				neighborSuperVerticesTable.putTuple(neighborSuperVertexTuple);
+				//try {
+					
+					//System.out.println(getCurrentVertex().getId()+  " retrieving" + neighborSuperVertexTuple[0] + "with map" + neighborSuperVerticesTable.getData().get(neighborSuperVertexTuple[0]));
+				//} catch (Exception e) {
+					// TODO: handle exception
+				//}
 				jsonNeighborSuperVertexTuple = null;
 				super_out_edges++;
 			}

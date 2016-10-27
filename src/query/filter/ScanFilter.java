@@ -40,10 +40,10 @@ public class ScanFilter extends Filter {
 	{
 		if (inputTable != null)
 		{
-			Multimap<Integer, Tuple> inputTableData = inputTable.getData();
-			for (Tuple currentTuple : inputTableData.values())
+			Multimap inputTableData = inputTable.getData();
+			for (int[] currentTuple : inputTableData.values())
 			{
-				cursor.setCurrentTuple(inputTableAlias, currentTuple.toArray());
+				cursor.setCurrentTuple(inputTableAlias, currentTuple);
 				boolean isConditionTrue = true;
 				for (Expression filterCondition: filterConditions)
 					isConditionTrue = isConditionTrue && (filterCondition.evaluate(cursor) ==1? true:false);

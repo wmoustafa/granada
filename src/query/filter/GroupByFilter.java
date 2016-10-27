@@ -3,6 +3,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.omg.CORBA.INITIALIZE;
+
 import algebra.RelationalType;
 import parser.Expression;
 import schema.Database;
@@ -26,6 +28,7 @@ public class GroupByFilter extends Filter {
 	boolean isRecursive;
 	boolean isSourceNodeVariableUnncessary;
 	AggregationFunctionType aggregationFunctionType;
+	int[] outputTuple;
 	
 	public GroupByFilter(String outputTableName, int[] keyFields, Expression[] groupByFields, AggregationFunctionType aggregationFunctionType, Expression aggregateField, boolean isRecursive, boolean isSourceNodeVariableUnncessary, RelationalType relationalType, Metadata metatadata)
 	{
@@ -46,6 +49,7 @@ public class GroupByFilter extends Filter {
 		this.isRecursive = isRecursive;
 		this.isSourceNodeVariableUnncessary = isSourceNodeVariableUnncessary;
 		this.aggregationFunctionType = aggregationFunctionType;
+		outputTuple = new int[groupByFields.length+1];
 //		System.out.println("GroupBy constructor. OutputTable = " + outputTableName + ", keyFields=" + Arrays.toString(keyFields));
 	}
 	
@@ -75,13 +79,12 @@ public class GroupByFilter extends Filter {
 
 	@Override
 	public void next() {
-		int currentValue = (Integer)aggregateField.evaluate(cursor);
-		int[] outputTuple = new int[groupByFields.length+1];
+		int currentValue = aggregateField.evaluate(cursor);
 		for (int i = 0; i < groupByFields.length; i++) {
 			outputTuple[i]=(Integer)groupByFields[i].evaluate(cursor);
 		}
 		outputTuple[groupByFields.length]=currentValue;			
-		outputTable.addTuple(new Tuple(outputTuple));
+		outputTable.addTuple(outputTuple);
 //		System.out.println("GroupBy currentValue = " + currentValue);
 	}
 	
