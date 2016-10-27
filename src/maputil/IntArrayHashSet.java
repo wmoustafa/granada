@@ -214,16 +214,13 @@ public class IntArrayHashSet extends AbstractObjectSet<int[]> implements java.io
 		return super.addAll( c );
 	}
 
-	public boolean add( final int[] h ) {
+	public boolean add( final int[] k ) {
 		int pos;
-		if ( ( ( h ) == null ) ) {
+		if ( ( ( k ) == null ) ) {
 			if ( containsNull ) return false;
 			containsNull = true;
 		}
 		else {
-			int length = h.length;
-			final int[] k = new int[length]; 
-			System.arraycopy(h, 0, k, 0, length);
 			int[] curr;
 			final int[][] key = this.key;
 			// The starting point.
@@ -232,7 +229,10 @@ public class IntArrayHashSet extends AbstractObjectSet<int[]> implements java.io
 				while ( !( ( curr = key[ pos = ( pos + 1 ) & mask ] ) == null ) )
 					if ( ( Arrays.equals(curr, k) ) ) return false;
 			}
-			key[ pos ] = k;
+			int length = k.length;
+			final int[] h = new int[length]; 
+			System.arraycopy(k, 0, h, 0, length);
+			key[ pos ] = h;
 		}
 		if ( size++ >= maxFill ) rehash( arraySize( size + 1, f ) );
 		if ( ASSERTS ) checkTable();
