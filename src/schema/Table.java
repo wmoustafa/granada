@@ -770,7 +770,7 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 				{
 					array[i] = in.readInt();
 				}
-				addTuple(array);
+				putTuple(array);
 			}	
 		
 	}

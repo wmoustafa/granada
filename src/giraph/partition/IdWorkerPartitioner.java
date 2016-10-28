@@ -69,16 +69,23 @@ public class IdWorkerPartitioner implements WorkerGraphPartitioner<SuperVertexId
     return workerPartitionStats;
   }
 
-  @Override
-  public PartitionExchange updatePartitionOwners(
-      WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
-    return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
-        myWorkerInfo, masterSetPartitionOwners);
-  }
+//Vicky FIXME put in comments and add auto-generated method to fix compilation errors  
+//  public PartitionExchange updatePartitionOwners(
+//      WorkerInfo myWorkerInfo,
+//      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
+//    return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
+//        myWorkerInfo, masterSetPartitionOwners);
+//  }
 
   @Override
   public Collection<? extends PartitionOwner> getPartitionOwners() {
     return partitionOwnerList;
   }
+
+@Override
+public PartitionExchange updatePartitionOwners(WorkerInfo arg0, Collection<? extends PartitionOwner> arg1,
+		PartitionStore<SuperVertexId, Database, NullWritable> arg2) {
+	// TODO Auto-generated method stub
+	return null;
+}
 }
