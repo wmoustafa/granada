@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import algebra.RelationalType;
 import algebra.Rule;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 
@@ -35,7 +36,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 	public void compute(
 			Vertex<SuperVertexId, Database, NullWritable> vertex,
 			Iterable<Database> messages) throws IOException {
-//			StringBuffer sb = null;
+			StringBuffer sb = new StringBuffer();
 //			if(vertex.getId().getVertexId() > 0 && vertex.getId().getVertexId() < 10  ){
 //				sb = new StringBuffer();
 //				sb.append("***************************************** \n");
@@ -76,6 +77,10 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			Set<String> changedTables = new HashSet<>();
 
 			Set<String> changed = inputDatabase.refresh(messagesDb);
+			if(vertex.getId().getVertexId() == 0){
+			sb.append("[Input db size= " + MemoryMeasurer.measureBytes(inputDatabase) + "]");
+			}
+			
 			
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			for (Rule rule : rulesToProcess)
@@ -88,9 +93,9 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					inputDatabase.removeDataTable(rule.getHead().getName() + "_full");
 				}
 				
-//				if(vertex.getId().getVertexId() == 0){
-//				sb.append("[Output db size= " + MemoryMeasurer.measureBytes(outputDatabase) + "]");
-//				}
+				if(vertex.getId().getVertexId() == 0){
+				sb.append("[Output db size= " + MemoryMeasurer.measureBytes(outputDatabase) + "]");
+				}
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
 				{
@@ -102,9 +107,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					changedTables.addAll(changed);
 				}
 			}
-//			if(vertex.getId().getVertexId() == 0){
-//			sb.append("[Relational db size= " + MemoryMeasurer.measureBytes(relationalDatabase) + "]");
-//			}
+
 			
 			for (String table : changedTables)
 				aggregate(table, new BooleanWritable(true));
@@ -135,11 +138,11 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					sendMessage(neighborId, neighborDb);
 				}
 			}
-//			if(vertex.getId().getVertexId() == 0){
+			if(vertex.getId().getVertexId() == 0){
 //			sb.append("[AFTER Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. ");
 //			sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
-//			System.out.println(sb.toString());
-//			}
+			System.out.println(sb.toString());
+			}
 			
 			vertex.setValue(inputDatabase);
 			vertex.voteToHalt();
