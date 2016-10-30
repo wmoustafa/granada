@@ -10,26 +10,26 @@ import it.unimi.dsi.fastutil.objects.ObjectSet;
 public class Multimap {
 	
 //	ModifiedJavaHashmap<K,LinkedList<V>> map;
-	IntArrayHashSet emptyValue = new IntArrayHashSet(1);
+	IntArrayArrayList emptyValue = new IntArrayArrayList(1);
 	int size = 0;
-	Int2ObjectOpenHashMap<IntArrayHashSet> map;
+	Int2ObjectOpenHashMap<IntArrayArrayList> map;
 	
 	public Multimap()
 	{
-		map = new Int2ObjectOpenHashMap<IntArrayHashSet>();
+		map = new Int2ObjectOpenHashMap<IntArrayArrayList>();
 	}
 	
 	public Multimap(int initialSize)
 	{
-		map = new Int2ObjectOpenHashMap<IntArrayHashSet>(); 
+		map = new Int2ObjectOpenHashMap<IntArrayArrayList>(); 
 	}
 
 	public void put(int key, int[] value)
 	{
-		IntArrayHashSet existingSet = map.get(key);
+		IntArrayArrayList existingSet = map.get(key);
 		if (existingSet == null)
 		{
-			existingSet = new IntArrayHashSet(1);
+			existingSet = new IntArrayArrayList(1);
 			map.put(key, existingSet);
 		}
 		boolean elementAdded = existingSet.add(value);
@@ -38,7 +38,7 @@ public class Multimap {
 	
 	public void remove(int key, int[] value)
 	{
-		IntArrayHashSet existingSet = map.get(key);
+		IntArrayArrayList existingSet = map.get(key);
 		if (existingSet != null)
 		{
 			boolean removed = existingSet.remove(value);
@@ -47,15 +47,15 @@ public class Multimap {
 		}
 	}
 
-	public IntArrayHashSet get(int key)
+	public IntArrayArrayList get(int key)
 	{
-		IntArrayHashSet value = map.get(key);
+		IntArrayArrayList value = map.get(key);
 		if (value != null) return value; else return emptyValue;
 	}
 	
 	public boolean contains(int key, int[] value)
 	{
-		IntArrayHashSet values = map.get(key);
+		IntArrayArrayList values = map.get(key);
 		if (values == null) return false;
 		return values.contains(value);
 	}
@@ -64,12 +64,12 @@ public class Multimap {
 	{
 		return size;
 	}
-	public ObjectSet<Entry<java.lang.Integer, IntArrayHashSet>> entries() {
+	public ObjectSet<Entry<java.lang.Integer, IntArrayArrayList>> entries() {
 		return map.entrySet();
 	}
 	public Iterable<int[]> values()
 	{
-		final Iterator<IntArrayHashSet> values= map.values().iterator();
+		final Iterator<IntArrayArrayList> values= map.values().iterator();
 		return new Iterable<int[]>() {
 
 			@Override
