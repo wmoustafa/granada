@@ -2,6 +2,7 @@ package giraph;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,7 +13,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 import schema.Table;
@@ -20,6 +20,7 @@ import schema.Table;
 	public class DatalogVertexInputFormatNoJSON extends 
 			TextVertexInputFormat<SuperVertexId, Database, NullWritable>{
 	
+		private AtomicInteger counter = new AtomicInteger(0);
 
 		@Override
 		public TextVertexInputFormat<SuperVertexId, Database, NullWritable>.TextVertexReader createVertexReader(
@@ -45,9 +46,11 @@ import schema.Table;
 				Matcher m = id.matcher(input);
 				if(!m.find())	
 				{
-					System.out.println("---> No match found for " + input);
-					throw new IOException("The input string did not match the regex pattern for super-vertex id."
-							+ "Input = " + input);
+					System.out.println("---> No match found for " + input.substring(0, 100));
+					System.out.println("Read " + counter.get() + " lines");					
+//					throw new IOException("The input string did not match the regex pattern for super-vertex id."
+//							+ "Input = " + input.substring(0, 100));
+					return new SuperVertexId((short)-1, -1);
 				}	
 				String[] sv_id = m.group(1).split(",");
 //				System.out.println(Integer.parseInt(sv_id[0])+","+ Integer.parseInt(sv_id[1]));
@@ -55,9 +58,12 @@ import schema.Table;
 			}
 
 			@Override
-			public Database getValue(String input) throws  IOException {
+			public Database getValue(String input) throws  IOException {								
 				
 				Metadata metadata = new Metadata();
+				
+				if(true)	
+					return new Database(metadata,-1);
 							
 				int[] vertexKeyFields = new int[]{0};
 				Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
@@ -144,13 +150,17 @@ import schema.Table;
 //				String formattedDate = sdf.format(date);
 //				System.out.println(formattedDate + "  Finished loading graph \n.");
 				
-				System.out.println("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
+//				System.out.println("[Size of  database  = " + MemoryMeasurer.measureBytes(database) + "].");
 				
 				return database;
 			}
 
 			@Override
 			protected String preprocessLine(Text line) throws IOException {
+				System.out.println(line.toString().substring(0, 5));
+				System.out.println("Length of line = " + line.toString().length());
+				System.out.println("Read " + counter.get() + " lines");
+				counter.addAndGet(1);
 				return (line.toString());
 			}
 			
