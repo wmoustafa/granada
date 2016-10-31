@@ -107,6 +107,7 @@ import schema.Table;
 			
 					//Read vertex data
 					int[] vertexTuple = new int[2];
+					int[] edgeTuple = new int[2];
 					while(v_matcher.find())
 						{
 						//Read vertex id
@@ -121,7 +122,6 @@ import schema.Table;
 						while(e_matcher.find())
 							numEdges++;
 						e_matcher.reset(v_matcher.group(2));
-						int[] edgeTuple = new int[2];
 						while(e_matcher.find())
 						{
 							edgeTuple[0] = vertexTuple[0];
