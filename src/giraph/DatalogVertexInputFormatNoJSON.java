@@ -121,13 +121,12 @@ import schema.Table;
 						while(e_matcher.find())
 							numEdges++;
 						e_matcher.reset(v_matcher.group(2));
-						int[] edgeTuple = new int[3];
+						int[] edgeTuple = new int[2];
 						while(e_matcher.find())
 						{
 							edgeTuple[0] = vertexTuple[0];
 							String[] e_id = e_matcher.group(1).split(",");
 							edgeTuple[1] = Integer.parseInt(e_id[0]);
-							edgeTuple[2] = Integer.parseInt(e_id[1]);	
 							outgoingNeighborsTable.putTuple(edgeTuple);
 						}
 					}
