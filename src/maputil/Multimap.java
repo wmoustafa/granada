@@ -21,9 +21,14 @@ public class Multimap {
 	
 	public Multimap(int initialSize)
 	{
-		map = new Int2ObjectOpenHashMap<IntArrayArrayList>(); 
+		map = new Int2ObjectOpenHashMap<IntArrayArrayList>(initialSize); 
 	}
 
+	public void finalize() {
+		for (IntArrayArrayList value : map.values())
+			value.trim();
+	}
+	
 	public void put(int key, int[] value)
 	{
 		IntArrayArrayList existingSet = map.get(key);

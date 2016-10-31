@@ -79,7 +79,10 @@ public class Table implements Writable {
 		this.keyFields = keyFields;
 		this.data = new Multimap(initialSize);
 	}
-
+	
+	public void finalize() {
+		data.finalize();
+	}
 	public void setAggregate()
 	{
 		isAggregate = true;

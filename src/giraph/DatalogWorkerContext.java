@@ -56,13 +56,13 @@ public class DatalogWorkerContext extends WorkerContext {
 			Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
 
 			int[] edgeKeyFields = new int[]{0};
-			Class[] edgeFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+			Class[] edgeFieldTypes = new Class[]{Integer.class, Integer.class};
 			
 			int[] incomingNeighborsKeyFields = new int[]{0};
-			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
 
 			int[] outgoingNeighborsKeyFields = new int[]{0};
-			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
 			
 			metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
 			metadata.setMetadata("edges", edgeKeyFields, edgeFieldTypes);

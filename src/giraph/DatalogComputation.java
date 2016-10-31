@@ -19,7 +19,7 @@ import com.google.gson.Gson;
 import algebra.RelationalType;
 import algebra.Rule;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import objectexplorer.MemoryMeasurer;
+//import objectexplorer.MemoryMeasurer;
 import schema.Database;
 import schema.Metadata;
 
@@ -78,7 +78,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 
 			Set<String> changed = inputDatabase.refresh(messagesDb);
 			if(vertex.getId().getVertexId() == 0){
-			sb.append("[Input db size= " + MemoryMeasurer.measureBytes(inputDatabase) + "]");
+			//sb.append("[Input db size= " + MemoryMeasurer.measureBytes(inputDatabase) + "]");
 			}
 			
 			
@@ -94,7 +94,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 				}
 				
 				if(vertex.getId().getVertexId() == 0){
-				sb.append("[Output db size= " + MemoryMeasurer.measureBytes(outputDatabase) + "]");
+				//sb.append("[Output db size= " + MemoryMeasurer.measureBytes(outputDatabase) + "]");
 				}
 				
 				if (rule.getRelationalType() == RelationalType.NOT_RELATIONAL)
@@ -141,7 +141,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			if(vertex.getId().getVertexId() == 0){
 //			sb.append("[AFTER Total size of supervertex = " + MemoryMeasurer.measureBytes(vertex.getValue()) + "]. ");
 //			sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
-			System.out.println(sb.toString());
+			//System.out.println(sb.toString());
 			}
 			
 			vertex.setValue(inputDatabase);
