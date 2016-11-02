@@ -1,8 +1,10 @@
 package maputil;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
@@ -81,7 +83,7 @@ public class Multimap {
 	}
 	
 	
-	public ObjectSet<Entry<java.lang.Integer, LinkedList<Tuple>>> entries() {
+	public Set<Entry<java.lang.Integer, LinkedList<Tuple>>> entries() {
 		return map.entrySet();
 	}
 	public Iterable<Tuple> values()

@@ -269,7 +269,6 @@ public class Table implements Writable {
 		{
 			int[] toBeInserted = value.toArray();
 			int aggregateArgIndex = toBeInserted.length - 1;
-			Tuple existingAggregateTuple = null;
 			for (Tuple t : otherTable.data.get(key))
 			{
 				int[] existing = t.toArray();
@@ -326,7 +325,7 @@ public class Table implements Writable {
 	
 	public int getKey(Tuple value)
 	{
-		assert(keyFields.length == 1);
+		//assert(keyFields.length == 1);
 //		System.out.println("Add tupe " + value);
 //		System.out.println("Keyfields = " + Arrays.toString(keyFields));
 		//int[] keys = new int[keyFields.length];
@@ -416,9 +415,9 @@ public class Table implements Writable {
 		return data.size() == 0;
 	}
 	
-	public Map<SuperVertexId,Table> partition(Table neighborsTable, Table neighborsSuperVerticesTable)
+	public HashMap<Integer,Table> partition(Table neighborsTable, Table neighborsSuperVerticesTable)
 	{
-		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
+		HashMap<Integer,Table> partitionedTable = new HashMap<Integer,Table>();
 		for (Tuple value : data.values())
 		{
 			int key = getKey(value);
@@ -430,7 +429,7 @@ public class Table implements Writable {
 			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+			int neighborSuperVertexId = (Integer)neighborSuperVertexArray[1];
 			Table existingTable = partitionedTable.get(neighborSuperVertexId);
 			if (existingTable == null)
 			{
@@ -447,15 +446,12 @@ public class Table implements Writable {
 		return partitionedTable;
 	}
 	
-	public Map<SuperVertexId,Table> partitionEdgeBased(
-			Table neighborsSuperVerticesTable,
-			Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	public HashMap<Integer,Table> partitionEdgeBased(Table neighborsSuperVerticesTable)
 	{
-		Map<SuperVertexId,Table> partitionedTable = new HashMap<SuperVertexId, Table>();
+		HashMap<Integer,Table> partitionedTable = new HashMap<Integer,Table>();
 		// The line below should change if source node index changes
 		// somehow in the code that rewrites the rule
 		// Right now, it is guaranteed to be at 0
-		int sourceNodeIdIndex = 0;
 
 		int neighborIdIndex;
 		if (isAggregate) neighborIdIndex = fieldTypes.length - 2;
@@ -469,25 +465,12 @@ public class Table implements Writable {
 			int key = getKey(value);
 			int[] tupleArray = value.toArray();
 			int neighborId = tupleArray[neighborIdIndex];
-			SuperVertexId neighborSuperVertexId= null;
-			if((neighborSuperVertexId = neighbors.get(neighborId)) == null)
-			{
-				 
-//				System.out.println("Neighbor id = " + neighborId);
-				int neighborsSuperVerticesKey = neighborId;
-				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(
-						neighborsSuperVerticesKey).iterator().next();
-//				System.out.println("Neighbor super vertex tuple = " + neighborSuperVertexTuple);
-				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-				neighborSuperVertexId = new SuperVertexId(
-						Integer.valueOf(neighborSuperVertexArray[1]).shortValue(), 
-						neighborSuperVertexArray[2]);
-				neighbors.put(neighborId, neighborSuperVertexId);
-			}
-//			else
-//			{
-//				System.out.println("Found neighbor:"+ neighborId +" , super=" + neighborSuperVertexId);
-//			}
+
+			//int neighborsSuperVerticesKey = neighborId;
+			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(
+					neighborId).iterator().next();
+			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
+			int neighborSuperVertexId = neighborSuperVertexArray[1];
 			Table existingTable = partitionedTable.get(neighborSuperVertexId);
 			if (existingTable == null)
 			{
@@ -501,17 +484,17 @@ public class Table implements Writable {
 			//if (!existingTable.data.contains(key, value))
 			{
 				//if (isSourceNodeVariableUnncessary) tupleArray[sourceNodeIdIndex] = 0;
-				//existingTable.data.put(key, value);
-				existingTable.addTuple(key, value);
+				existingTable.data.put(key, value);
+				//existingTable.addTuple(key, value);
 			}
 		}
 		return partitionedTable;
 	}
 
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessages(Table neighborsTable, Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public HashMap<Integer,PartitionWithMessages> partitionWithMessages(Table neighborsTable, Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
-		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();		// The line below should change if source node index changes
+		HashMap<Integer,PartitionWithMessages> partitionedTableWithMessages = new HashMap<Integer,PartitionWithMessages>();		// The line below should change if source node index changes
 
 		for (Tuple value : data.values())
 		{
@@ -535,7 +518,7 @@ public class Table implements Writable {
 				int neighborsSuperVerticesKey = neighborId;
 				Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 				int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-				SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+				int neighborSuperVertexId = (Integer)neighborSuperVertexArray[1];
 				PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 				if (existingPartitionWithMessages == null)
 				{
@@ -559,9 +542,9 @@ public class Table implements Writable {
 		return partitionedTableWithMessages;
 	}
 	
-	public Map<SuperVertexId,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
+	public HashMap<Integer,PartitionWithMessages> partitionWithMessagesEdgeBased(Table neighborsSuperVerticesTable, Table messagesTable, Table otherDirectionNeighborsTable, boolean isPagerank)
 	{
-		Map<SuperVertexId,PartitionWithMessages> partitionedTableWithMessages = new HashMap<SuperVertexId, PartitionWithMessages>();
+		HashMap<Integer,PartitionWithMessages> partitionedTableWithMessages = new HashMap<Integer,PartitionWithMessages>();
 		// The line below should change if source node index changes
 		// somehow in the code that rewrites the rule
 		// Right now, it is guaranteed to be at 0
@@ -599,7 +582,7 @@ public class Table implements Writable {
 			int neighborsSuperVerticesKey = neighborId;
 			Tuple neighborSuperVertexTuple = neighborsSuperVerticesTable.data.get(neighborsSuperVerticesKey).iterator().next();
 			int[] neighborSuperVertexArray = neighborSuperVertexTuple.toArray();
-			SuperVertexId neighborSuperVertexId = new SuperVertexId(((Integer)(neighborSuperVertexArray[1])).shortValue(), (Integer)(neighborSuperVertexArray[2]));
+			int neighborSuperVertexId = (Integer)neighborSuperVertexArray[1];
 			PartitionWithMessages existingPartitionWithMessages = partitionedTableWithMessages.get(neighborSuperVertexId);
 			if (existingPartitionWithMessages == null)
 			{
@@ -731,8 +714,6 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
-
-
 			int nFieldTypes = in.readInt();
 			isRecursive = in.readBoolean();
 			isSourceNodeVariableUnncessary = in.readBoolean();

@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.formats.TextVertexInputFormat;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -22,11 +23,11 @@ import schema.Table;
 import schema.Tuple;
 
 	public class DatalogVertexInputFormatNoJSON extends 
-			TextVertexInputFormat<SuperVertexId, Database, NullWritable>{
+			TextVertexInputFormat<IntWritable, Database, NullWritable>{
 	
 
 		@Override
-		public TextVertexInputFormat<SuperVertexId, Database, NullWritable>.TextVertexReader createVertexReader(
+		public TextVertexInputFormat<IntWritable, Database, NullWritable>.TextVertexReader createVertexReader(
 				InputSplit arg0, TaskAttemptContext arg1) throws IOException {
 			return new DatalogVertexReaderFromEachLine();
 		}
@@ -36,15 +37,15 @@ import schema.Tuple;
 		{
 
 			@Override
-			protected Iterable<Edge<SuperVertexId, NullWritable>> getEdges(String input) {
+			protected Iterable<Edge<IntWritable, NullWritable>> getEdges(String input) {
 				
 				//No edges between super-vertices
-				List<Edge<SuperVertexId, NullWritable>> edges = new ArrayList<Edge<SuperVertexId, NullWritable>>();			
+				List<Edge<IntWritable, NullWritable>> edges = new ArrayList<Edge<IntWritable, NullWritable>>();			
 				return edges;
 			}
 
 			@Override
-			public SuperVertexId getId(String input) throws IOException {
+			public IntWritable getId(String input) throws IOException {
 				Pattern id = Pattern.compile("\\[\\[(\\d+?,\\d+?)\\]");			
 				Matcher m = id.matcher(input);
 				if(!m.find())	
@@ -55,7 +56,7 @@ import schema.Tuple;
 				}	
 				String[] sv_id = m.group(1).split(",");
 //				System.out.println(Integer.parseInt(sv_id[0])+","+ Integer.parseInt(sv_id[1]));
-				return new SuperVertexId((short)Integer.parseInt(sv_id[0]), Integer.parseInt(sv_id[1]));
+				return new IntWritable(Integer.parseInt(sv_id[0]));
 			}
 
 			@Override
@@ -63,19 +64,6 @@ import schema.Tuple;
 				
 				Metadata metadata = new Metadata();
 							
-				int[] vertexKeyFields = new int[]{0};
-				Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
-				Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, 10000); // <<- FIXME Initial size
-
-				int[] outgoingNeighborsKeyFields = new int[]{0};
-				//Vicky FIXME remove edge weight since it's not used				
-//				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
-				Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, 10000); // <<- FIXME Initial size
-
-				int[] neighborSuperVerticesKeyFields = new int[]{0};
-				Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
-				Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, 100);
 				
 				Pattern sv_data = Pattern.compile("(\\[.*?\\])(\\[.*?\\])\\]");
 				Pattern vdata = Pattern.compile("\\((\\d+,\\d+)\\)(\\[.*?\\])");
@@ -85,6 +73,37 @@ import schema.Tuple;
 				Matcher v_matcher = vdata.matcher("");
 				Matcher e_matcher = edges.matcher("");
 				Matcher sve_matcher = sv_edges.matcher("");
+				int numVertices = 0;
+				int numSuperNeighbors = 0;
+				
+				if(sv_matcher.find())
+				{
+					v_matcher.reset(sv_matcher.group(1));
+			
+					//Read vertex data
+					int[] vertexTuple = new int[2];
+					while(v_matcher.find())
+						numVertices++;
+					
+					//Read neighbors of current super-vertex
+					sve_matcher.reset(sv_matcher.group(2));
+					while(sve_matcher.find())
+						numSuperNeighbors++;
+				}
+
+				int[] vertexKeyFields = new int[]{0};
+				Class[] vertexFieldTypes = new Class[]{Integer.class, Integer.class};
+				Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, numVertices); // <<- FIXME Initial size
+
+				int[] outgoingNeighborsKeyFields = new int[]{0};
+				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
+				Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, numVertices); // <<- FIXME Initial size
+
+				int[] neighborSuperVerticesKeyFields = new int[]{0};
+				Class[] neighborSuperVerticesFieldTypes = new Class[]{Integer.class, Integer.class};
+				Table neighborSuperVerticesTable = new Table(neighborSuperVerticesFieldTypes, neighborSuperVerticesKeyFields, numSuperNeighbors);
+
+				sv_matcher.reset();
 				
 				if(sv_matcher.find())
 				{
@@ -122,10 +141,9 @@ import schema.Tuple;
 					while(sve_matcher.find())
 					{
 						String[] e_id = sve_matcher.group(1).split(",");
-						int[] neighborSuperVertexTuple = new int[3];
+						int[] neighborSuperVertexTuple = new int[2];
 						neighborSuperVertexTuple[0] = Integer.parseInt(e_id[0]);
 						neighborSuperVertexTuple[1] = Integer.parseInt(e_id[1]);
-						neighborSuperVertexTuple[2] = Integer.parseInt(e_id[2]);
 						neighborSuperVerticesTable.putTuple(new Tuple(neighborSuperVertexTuple));
 					}
 				}

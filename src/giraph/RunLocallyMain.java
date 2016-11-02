@@ -32,14 +32,14 @@ import schema.Tuple;
 public class RunLocallyMain {
 
 	 // graph of super-vertices
-	public static Map<SuperVertexId,Database> input_graph = new HashMap<SuperVertexId, Database>();
+	public static Map<Integer,Database> input_graph = new HashMap<Integer, Database>();
 	static DatalogDependencyGraph g;
 	static List<Rule> rulesToProcess;
 	static Program rewrittenProgram;
 	static Map<String,Boolean> changed_aggregate = new HashMap<>();
 	static Metadata metadata;
 	static String program_name = "wcc";
-	static Map<SuperVertexId, List<Database>> send_messages = new HashMap<>();
+	static Map<Integer, List<Database>> send_messages = new HashMap<>();
 	static String path = "/Users/papavas/Documents/UCSD/research/nec_git_repository/granada/datasets/";
 	
 	public static void main(String args[]) throws IOException, InterruptedException, JSONException, ParseException
@@ -55,7 +55,7 @@ public class RunLocallyMain {
 		{
 			System.out.println("############################--> Now at superstep " + superstep);
 			preSuperstep(superstep);
-			for(SuperVertexId id: input_graph.keySet())
+			for(Integer id: input_graph.keySet())
 			{
 				//Evaluate rule per super-vertex
 //				System.out.println("------> Now at super-vertex " + id);
@@ -71,14 +71,14 @@ public class RunLocallyMain {
 		return (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
 	}
 	
-	private static void compute(SuperVertexId id, Database inputDatabase, List<Database> messages)
+	private static void compute(Integer id, Database inputDatabase, List<Database> messages)
 	{
 		
 		//Memory measurer
 
 		StringBuilder sb = new StringBuilder();
 		
-		Int2ObjectOpenHashMap<SuperVertexId> neighbors = new Int2ObjectOpenHashMap<SuperVertexId>();
+		HashMap<Integer,Integer> neighbors = new HashMap<Integer,Integer>();
 		Database relationalDatabase = new Database();
 		Database messagesDb = new Database();
 		
@@ -131,14 +131,14 @@ public class RunLocallyMain {
 
 		if (!relationalDatabase.isEmpty())
 		{
-			Map<SuperVertexId, Database> superVertexIdToDatabase = null;
+			Map<Integer, Database> superVertexIdToDatabase = null;
 	
 				superVertexIdToDatabase = relationalDatabase.
-				getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors);
+				getDatabasesForEverySuperVertexEdgeBased(inputDatabase);
 //				sb.append("[Size of superVertexIdToDatabase = " + MemoryMeasurer.measureBytes(superVertexIdToDatabase) + "].");
-			for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
+			for (Entry<Integer, Database> entry : superVertexIdToDatabase.entrySet())
 			{
-				SuperVertexId neighborId = entry.getKey();
+				Integer neighborId = entry.getKey();
 				Database neighborDb = entry.getValue();
 				if(!send_messages.containsKey(neighborId))
 				{
@@ -220,7 +220,7 @@ public class RunLocallyMain {
 		metadata.setMetadata("outgoingNeighbors", outgoingNeighborsKeyFields, outgoingNeighborsFieldTypes);
 	}
 
-	private static void loadGraph(String input,Map<SuperVertexId,Database> input_graph) throws IOException,InterruptedException, JSONException {
+	private static void loadGraph(String input,Map<Integer,Database> input_graph) throws IOException,InterruptedException, JSONException {
 		BufferedReader bfi = new BufferedReader(new FileReader(new File(input)));
 		
 		// each line of input file contains the data and id of one super-vertex
@@ -236,7 +236,7 @@ public class RunLocallyMain {
 						+ "Input = " + input);
 			}	
 			String[] sv_id = m.group(1).split(",");
-			SuperVertexId s_id =new SuperVertexId((short)Integer.parseInt(sv_id[0]), Integer.parseInt(sv_id[1]));
+			Integer s_id = Integer.parseInt(sv_id[1]);
 			Database data = readSuperVertexData(line);
 			input_graph.put(s_id, data);
 		}

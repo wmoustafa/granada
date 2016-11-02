@@ -1,6 +1,7 @@
 package giraph;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.Set;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.log4j.Logger;
 
@@ -23,7 +25,7 @@ import schema.Database;
 import schema.Metadata;
 
 
-public class DatalogComputation extends BasicComputation<SuperVertexId, Database, NullWritable, Database> {
+public class DatalogComputation extends BasicComputation<IntWritable, Database, NullWritable, Database> {
 	private static final Logger LOG =
 			Logger.getLogger(DatalogComputation.class);
 	
@@ -34,7 +36,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 	}
 	@Override
 	public void compute(
-			Vertex<SuperVertexId, Database, NullWritable> vertex,
+			Vertex<IntWritable, Database, NullWritable> vertex,
 			Iterable<Database> messages) throws IOException {
 //			StringBuffer sb = null;
 //			if(vertex.getId().getVertexId() > 0 && vertex.getId().getVertexId() < 10  ){
@@ -52,7 +54,6 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			boolean useSemiAsync = wc.useSemiAsync();
 			boolean useSemiJoin = wc.useSemiJoin();
 			boolean isPagerank = wc.getProgramName().equals("pagerank");
-			Int2ObjectOpenHashMap<SuperVertexId> neighbors = new Int2ObjectOpenHashMap<SuperVertexId>();
 			Metadata metadata = wc.metadata;
 			
 			
@@ -64,13 +65,13 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			
 			for (Database message : messages){
 				messagesDb.combine2(message);
-//				inputDatabase.combine2(message); //Vicky FIXME efficiency optimization
+				//inputDatabase.combine2(message); //Vicky FIXME efficiency optimization
 			}
 
-			assert(!messagesDb.isEmpty());
+			//assert(!messagesDb.isEmpty());
 					
 			Set<String> changedTables = new HashSet<>();
-//			Set<String> changed = new HashSet<>();
+			//Set<String> changed = new HashSet<>();
 			Set<String> changed = inputDatabase.refresh(messagesDb); //Vicky FIXME efficiency optimization
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			
@@ -101,13 +102,13 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 
 			if (!relationalDatabase.isEmpty())
 			{
-				Map<SuperVertexId, Database> superVertexIdToDatabase = null;
+				HashMap<Integer,Database> superVertexIdToDatabase = null;
 				if (!useSemiAsync && !useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertex(inputDatabase);
 				else if (!useSemiAsync && useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
-					getDatabasesForEverySuperVertexEdgeBased(inputDatabase, neighbors);
+					getDatabasesForEverySuperVertexEdgeBased(inputDatabase);
 				else if (useSemiAsync && !useSemiJoin) 
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessages(inputDatabase, isPagerank);
@@ -115,12 +116,12 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 					superVertexIdToDatabase = relationalDatabase.
 					getDatabasesForEverySuperVertexWithMessagesEdgeBased(inputDatabase, isPagerank);
 				
-				for (Entry<SuperVertexId, Database> entry : superVertexIdToDatabase.entrySet())
+				for (Entry<Integer, Database> entry : superVertexIdToDatabase.entrySet())
 				{
-					SuperVertexId neighborId = entry.getKey();
+					int neighborId = entry.getKey();
 					Database neighborDb = entry.getValue();
 //					sb.append("[Message send size= " + MemoryMeasurer.measureBytes(neighborDb) + "]");
-					sendMessage(neighborId, neighborDb);
+					sendMessage(new IntWritable(neighborId), neighborDb);
 				}
 			}
 			

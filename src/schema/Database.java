@@ -16,7 +16,6 @@ import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.io.Writable;
 
 import algebra.RelationalType;
-import giraph.SuperVertexId;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
@@ -302,30 +301,30 @@ public class Database implements Writable {
 		return relationalDatabase;
 	}
 	
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertex(Database inputDatabase)
+	public HashMap<Integer,Database> getDatabasesForEverySuperVertex(Database inputDatabase)
 	{
-		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		HashMap<Integer,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
 		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			Map<SuperVertexId,Table> outgoingPartitionedTable = new HashMap<>();
-			Map<SuperVertexId,Table> incomingPartitionedTable = new HashMap<>();
+			HashMap<Integer,Table> outgoingPartitionedTable = new HashMap<>();
+			HashMap<Integer,Table> incomingPartitionedTable = new HashMap<>();
 			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
 				outgoingPartitionedTable = table.partition(inputDatabase.tables.get("outgoingNeighbors"), inputDatabase.tables.get("neighborSuperVertices"));
 			
 			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
 				incomingPartitionedTable = table.partition(inputDatabase.tables.get("incomingNeighbors"), inputDatabase.tables.get("neighborSuperVertices"));
 
-			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
+			HashMap<Integer,Table> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);
 			partitionedTable.putAll(incomingPartitionedTable);
 			
-			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
+			for (Entry<Integer,Table> partitionEntry : partitionedTable.entrySet())
 			{
-				SuperVertexId superVertexId = partitionEntry.getKey();
+				int superVertexId = partitionEntry.getKey();
 				Table tablePartition = partitionEntry.getValue();
 				Database existingDatabase = partitionedDatabase.get(superVertexId);
 				if (existingDatabase == null) 
@@ -339,22 +338,22 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase, Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	public HashMap<Integer,Database> getDatabasesForEverySuperVertexEdgeBased(Database inputDatabase)
 	{
-		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		HashMap<Integer,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
 		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
+			HashMap<Integer,Table> partitionedTable = new HashMap<>();
 			
-			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), neighbors);
+			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"));
 			
-			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
+			for (Entry<Integer,Table> partitionEntry : partitionedTable.entrySet())
 			{
-				SuperVertexId superVertexId = partitionEntry.getKey();
+				int superVertexId = partitionEntry.getKey();
 				Table tablePartition = partitionEntry.getValue();
 				Database existingDatabase = partitionedDatabase.get(superVertexId);
 				if (existingDatabase == null) 
@@ -372,24 +371,23 @@ public class Database implements Writable {
 	}
 	
 	//TODO Vicky to be used only for the case where |V| = |SV|
-	public Map<SuperVertexId,Database> getDatabasesForEveryVertex(
-			Database inputDatabase, 
-			Int2ObjectOpenHashMap<SuperVertexId> neighbors)
+	public HashMap<Integer,Database> getDatabasesForEveryVertex(
+			Database inputDatabase)
 	{
-		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		HashMap<Integer,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
 		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			Map<SuperVertexId,Table> partitionedTable = new HashMap<>();
+			HashMap<Integer,Table> partitionedTable = new HashMap<>();
 			
-			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), neighbors);
+			partitionedTable = table.partitionEdgeBased(inputDatabase.tables.get("neighborSuperVertices"));
 			
-			for (Entry<SuperVertexId,Table> partitionEntry : partitionedTable.entrySet())
+			for (Entry<Integer,Table> partitionEntry : partitionedTable.entrySet())
 			{
-				SuperVertexId superVertexId = partitionEntry.getKey();
+				int superVertexId = partitionEntry.getKey();
 				Table tablePartition = partitionEntry.getValue();
 				Database existingDatabase = partitionedDatabase.get(superVertexId);
 				if (existingDatabase == null) 
@@ -406,30 +404,30 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexWithMessagesEdgeBased(Database inputDatabase, boolean isPagerank)
+	public HashMap<Integer,Database> getDatabasesForEverySuperVertexWithMessagesEdgeBased(Database inputDatabase, boolean isPagerank)
 	{
-		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		HashMap<Integer,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
 		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			Map<SuperVertexId,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
-			Map<SuperVertexId,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
 			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
 				outgoingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("incomingNeighbors"), isPagerank);
 			
 			if (table.getRelationalType() == RelationalType.INCOMING_RELATIONAL || table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
 				incomingPartitionedTable = table.partitionWithMessagesEdgeBased(inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"), inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
 
-			Map<SuperVertexId,PartitionWithMessages> partitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);
 			partitionedTable.putAll(incomingPartitionedTable);
 			
-			for (Entry<SuperVertexId,PartitionWithMessages> partitionEntry : partitionedTable.entrySet())
+			for (Entry<Integer,PartitionWithMessages> partitionEntry : partitionedTable.entrySet())
 			{
-				SuperVertexId superVertexId = partitionEntry.getKey();
+				int superVertexId = partitionEntry.getKey();
 				Table tablePartition = partitionEntry.getValue().partition;
 				Table messages = partitionEntry.getValue().messages;
 				Database existingDatabase = partitionedDatabase.get(superVertexId);
@@ -445,17 +443,17 @@ public class Database implements Writable {
 		return partitionedDatabase;
 	}
 
-	public Map<SuperVertexId,Database> getDatabasesForEverySuperVertexWithMessages(Database inputDatabase, boolean isPagerank)
+	public HashMap<Integer,Database> getDatabasesForEverySuperVertexWithMessages(Database inputDatabase, boolean isPagerank)
 	{
-		Map<SuperVertexId,Database> partitionedDatabase = new HashMap<>(); 
+		HashMap<Integer,Database> partitionedDatabase = new HashMap<>(); 
 		Database relationalDatabase = getRelationalDatabase();
 		for (Entry<String,Table> entry : relationalDatabase.tables.entrySet())
 		{
 			String tableName = entry.getKey();
 			Table table = entry.getValue();
 			
-			Map<SuperVertexId,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
-			Map<SuperVertexId,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> outgoingPartitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> incomingPartitionedTable = new HashMap<>();
 			if (table.getRelationalType() == RelationalType.OUTGOING_RELATIONAL || 
 					table.getRelationalType() == RelationalType.TWO_WAY_RELATIONAL)
 				outgoingPartitionedTable = table.partitionWithMessages(inputDatabase.tables.get("outgoingNeighbors"), 
@@ -468,13 +466,13 @@ public class Database implements Writable {
 						inputDatabase.tables.get("neighborSuperVertices"), inputDatabase.tables.get("messages_full"),
 						inputDatabase.tables.get("outgoingNeighbors"), isPagerank);
 
-			Map<SuperVertexId,PartitionWithMessages> partitionedTable = new HashMap<>();
+			HashMap<Integer,PartitionWithMessages> partitionedTable = new HashMap<>();
 			partitionedTable.putAll(outgoingPartitionedTable);
 			partitionedTable.putAll(incomingPartitionedTable);
 			
-			for (Entry<SuperVertexId,PartitionWithMessages> partitionEntry : partitionedTable.entrySet())
+			for (Entry<Integer,PartitionWithMessages> partitionEntry : partitionedTable.entrySet())
 			{
-				SuperVertexId superVertexId = partitionEntry.getKey();
+				int superVertexId = partitionEntry.getKey();
 				Table tablePartition = partitionEntry.getValue().partition;
 				Table messages = partitionEntry.getValue().messages;
 				Database existingDatabase = partitionedDatabase.get(superVertexId);
