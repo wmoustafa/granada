@@ -272,17 +272,17 @@ public class Database implements Writable {
 			Table fullTable = tables.get(deltaTableName + "_full");
 			if (fullTable != null) 
 			{
-				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
+//				System.out.println("Combine full table " + fullTable.toString() + " with delta table " + deltaTable);
 				boolean tableChanged = fullTable.combineAndSubtract(deltaTable);
 				if (tableChanged) changedTables.add(deltaTableName);
 			}
 			else
 			{
-				System.out.println("Add full table " + deltaTableName + "_full");
+//				System.out.println("Add full table " + deltaTableName + "_full");
 				tables.put(deltaTableName + "_full", deltaTable);
 				if (!deltaTable.isEmpty()) changedTables.add(deltaTableName);
 			}
-			System.out.println("Add table " + deltaTableName);
+//			System.out.println("Add table " + deltaTableName);
 			tables.put(deltaTableName, deltaTable);
 		}
 		return changedTables;

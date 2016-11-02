@@ -769,7 +769,7 @@ int getNumberOfNeighbors(int key, Table neighborsTable)
 					array[i] = in.readInt();
 				}
 				Tuple tuple = new Tuple(array);
-				addTuple(tuple);
+				putTuple(tuple); //Vicky FIXME replaced addTuple with putTule to avoid unnecessary aggregation
 			}	
 		
 	}

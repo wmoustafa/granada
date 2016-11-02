@@ -234,22 +234,22 @@ public class SnapToPartitionedGiraph1 {
 							
 							
 							//Vicky FIXME The below code inverts lines to avoid creating DAGs
-//							if (DAG || ((n ^ neighborId) & 0x01) == 1)
-//							{
-//								if (n > neighborId) 
-//									outEdges.add(neighborIdAndWeight); 
-//								else 
-//									inEdges.add(neighborIdAndWeight);}
-//							else 
-//							{
-//								if (n < neighborId) 
-//									outEdges.add(neighborIdAndWeight); 
-//								else 
-//									inEdges.add(neighborIdAndWeight);
-//							}
+							if (DAG || ((n ^ neighborId) & 0x01) == 1)
+							{
+								if (n > neighborId) 
+									outEdges.add(neighborIdAndWeight); 
+								else 
+									inEdges.add(neighborIdAndWeight);}
+							else 
+							{
+								if (n < neighborId) 
+									outEdges.add(neighborIdAndWeight); 
+								else 
+									inEdges.add(neighborIdAndWeight);
+							}
 							
 							//Vicky FIXME replace with below so that the input graphs match the output
-							outEdges.add(neighborIdAndWeight);
+//							outEdges.add(neighborIdAndWeight);
 							
 							int ni = threeLevelPartitioning[neighborId][0];
 							int nj = threeLevelPartitioning[neighborId][1];
@@ -280,9 +280,9 @@ public class SnapToPartitionedGiraph1 {
 //						vertexArray[1] = inEdges.toArray();
 //						vertexArray[2] = outEdges.toArray();
 						
-						csvOut.print("vertex\t" + n + "\t" + labelNumber + "\t");
+						csvOut.print( n + "\t" + labelNumber + "\t");
 						for (int[] outEdge : outEdges)
-							csvOut.print("edge\t" + n + "\t" + outEdge[0] + "\t" + outEdge[1] + "\t");
+							csvOut.print( n + "\t" + outEdge[0] + "\t" + outEdge[1] + "\t");
 						csvOut.println();
 						superVertexData[c++] = vertexArray;
 					}
@@ -381,12 +381,16 @@ public class SnapToPartitionedGiraph1 {
 
 		File outputFile = new File(tmpDir, UUID.randomUUID().toString());
 		PrintWriter out = new PrintWriter(outputFile);
-		out.println(numberOfNodes + " " + numberOfEdges / 2);
+		out.println(numberOfNodes + " " + numberOfEdges / 2); 
+//		out.println(numberOfNodes + " " + (numberOfEdges / 2) + " 011"); //Vicky FIXME for error with large lines
 		for (int i = 0; i < numberOfNodes; i++)
 		{
 			StringBuilder outputLine = new StringBuilder();
 			for (int j = 1; j < graph[i].length; j++)
-				outputLine.append(sequentialIds[graph[i][j]] + 1 + " ");
+                outputLine.append(sequentialIds[graph[i][j]] + 1 + " ");
+//			outputLine.append("0 "); //Vicky FIXME for error with large lines
+//			for (int j = 1; j < graph[i].length; j++)
+//				outputLine.append((sequentialIds[graph[i][j]] + 1) + " 1 "); //Vicky FIXME for error with large lines
 			if (outputLine.length() > 0) outputLine.deleteCharAt(outputLine.length() - 1);
 			out.println(outputLine.toString());
 		}
@@ -494,7 +498,7 @@ public class SnapToPartitionedGiraph1 {
 					int from = Integer.parseInt(split[0]);
 					int to = Integer.parseInt(split[1]);
 					numberOfNieghbors[from]++;
-//					numberOfNieghbors[to]++; //FIXME vicky fix for making output files same as snap
+					numberOfNieghbors[to]++; //FIXME vicky fix for making output files same as snap
 					nEdges++;
 				}
 				counter++;
@@ -529,8 +533,8 @@ public class SnapToPartitionedGiraph1 {
 					graph[from][currentIndex[from] + 1] = to;
 					currentIndex[from]++;
 					graph[to][0] = to;
-//					graph[to][currentIndex[to] + 1] = from; //FIXME vicky fix for making output files same as snap 
-//					currentIndex[to]++;
+					graph[to][currentIndex[to] + 1] = from; //FIXME vicky fix for making output files same as snap 
+					currentIndex[to]++;
 				}
 				counter++;
 			}

@@ -68,7 +68,9 @@ import schema.Tuple;
 				Table vertexTable = new Table(vertexFieldTypes, vertexKeyFields, 10000); // <<- FIXME Initial size
 
 				int[] outgoingNeighborsKeyFields = new int[]{0};
-				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+				//Vicky FIXME remove edge weight since it's not used				
+//				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+				Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
 				Table outgoingNeighborsTable = new Table(outgoingNeighborsFieldTypes, outgoingNeighborsKeyFields, 10000); // <<- FIXME Initial size
 
 				int[] neighborSuperVerticesKeyFields = new int[]{0};
@@ -102,11 +104,15 @@ import schema.Tuple;
 						e_matcher.reset(v_matcher.group(2));
 						while(e_matcher.find())
 						{
-							int[] edgeTuple = new int[3];
+//							int[] edgeTuple = new int[3]; 
+//							edgeTuple[0] = vertexTuple[0];
+//							String[] e_id = e_matcher.group(1).split(",");
+//							edgeTuple[1] = Integer.parseInt(e_id[0]);
+//							edgeTuple[2] = Integer.parseInt(e_id[1]);	
+							int[] edgeTuple = new int[2]; //Vicky FIXME remove edge weight since it's not used
 							edgeTuple[0] = vertexTuple[0];
 							String[] e_id = e_matcher.group(1).split(",");
 							edgeTuple[1] = Integer.parseInt(e_id[0]);
-							edgeTuple[2] = Integer.parseInt(e_id[1]);	
 							outgoingNeighborsTable.putTuple(new Tuple(edgeTuple));
 						}
 					}
@@ -148,7 +154,7 @@ import schema.Tuple;
 //				String formattedDate = sdf.format(date);
 //				System.out.println(formattedDate + "  Finished loading graph \n.");
 				
-				System.out.println(database);
+//				System.out.println(database);
 				
 				return database;
 			}

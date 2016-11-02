@@ -45,7 +45,7 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 //				sb.append("Detailed table sizes of Database: "+ vertex.getValue().printTableSizes());
 //			}
 		
-		System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
+//		System.out.println("NOW AT VERTEX " + vertex.getId() + " AT SUPERSTEP " + getSuperstep());
 		
 
 			DatalogWorkerContext wc = getWorkerContext();
@@ -63,13 +63,15 @@ public class DatalogComputation extends BasicComputation<SuperVertexId, Database
 			Database messagesDb = new Database();
 			
 			for (Database message : messages){
-				messagesDb.combine2(message);				
+				messagesDb.combine2(message);
+//				inputDatabase.combine2(message); //Vicky FIXME efficiency optimization
 			}
 
 			assert(!messagesDb.isEmpty());
 					
 			Set<String> changedTables = new HashSet<>();
-			Set<String> changed = inputDatabase.refresh(messagesDb); //<-------------------- refresh
+//			Set<String> changed = new HashSet<>();
+			Set<String> changed = inputDatabase.refresh(messagesDb); //Vicky FIXME efficiency optimization
 			List<Rule> rulesToProcess = wc.getRulesToProcess();
 			
 			for (Rule rule : rulesToProcess)

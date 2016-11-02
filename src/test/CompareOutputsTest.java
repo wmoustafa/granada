@@ -39,14 +39,14 @@ public class CompareOutputsTest
 	   public static Collection inputFiles() {
 	      return Arrays.asList(new Object[][] {
 	         {PATH+"dl_small_20.1", PATH+"giraph_small_20.1" , true },
-	         {PATH+"dl_pokec.1000", PATH+"giraph_pokec.1000" , true }
+//	         {PATH+"dl_orkut.1000", PATH+"giraph_orkut.1000" , true }
+	         {PATH+"dl_pokec.1000", PATH+"giraph_pokec.1000" , true }	         
 	      });
 	   }
 
 	   // This test will run 4 times since we have 5 parameters defined
 	   @Test
 	   public void testCompareDatalogToGiraphOutput() throws IOException {
-	      System.out.println("Parameterized dl file is : " + dl_file);
 	      assertEquals(expectedResult, checker.compareOutputs(dl_file, g_file));
 	   }
 

@@ -62,7 +62,9 @@ public class DatalogWorkerContext extends WorkerContext {
 			Class[] incomingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
 
 			int[] outgoingNeighborsKeyFields = new int[]{0};
-			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
+			//Vicky FIXME remove edge weight since it's not used
+			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class};
+//			Class[] outgoingNeighborsFieldTypes = new Class[]{Integer.class, Integer.class, Integer.class};
 			
 			metadata.setMetadata("vertices", vertexKeyFields, vertexFieldTypes);
 			metadata.setMetadata("edges", edgeKeyFields, edgeFieldTypes);

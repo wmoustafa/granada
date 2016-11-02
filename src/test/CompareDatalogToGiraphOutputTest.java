@@ -29,6 +29,8 @@ public class CompareDatalogToGiraphOutputTest
 		
 		if(dl_list.equals(g_list))
 			return true;
+		System.out.println("first = " + dl_list);
+		System.out.println("second = " + g_list);
 		return false;
 	}
 
